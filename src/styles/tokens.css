@@ -1,0 +1,255 @@
+/*
+ * KlippFlow — tokens de diseño.
+ * Fuente única de valores visuales. Ningún componente debe usar hexadecimales
+ * ni valores visuales sueltos: todo sale de estas variables.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Colores base */
+  --bg-outer: #060606;
+  --bg: #0d0d0e;
+  --card: #151516;
+  --elevated: #1c1c1e;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #ecebe7;
+  --text-2: #96948e;
+  --text-dim: #5f5e5a;
+  --accent: #d9d0bf;
+  --ink: #121211;
+  --green: #86b894;
+  --amber: #dba75f;
+  --red: #cc746d;
+  --white: #ffffff;
+  --black: #000000;
+
+  /* Colores internos del logo y de la PWA (provisionales) */
+  --logo-light: #efe8d8;
+  --logo-dark: #b9ae98;
+  --logo-outline: #d9d0bf;
+  --logo-carbon: #232325;
+  --logo-perforation: #3a3a3d;
+  --logo-background: #121211;
+  --favicon-background: #2c2c2c;
+
+  /* Variantes con opacidad derivadas de los tokens */
+  --accent-60: color-mix(in srgb, var(--accent) 60%, transparent);
+  --accent-40: color-mix(in srgb, var(--accent) 40%, transparent);
+  --accent-20: color-mix(in srgb, var(--accent) 20%, transparent);
+
+  --green-40: color-mix(in srgb, var(--green) 40%, transparent);
+  --green-30: color-mix(in srgb, var(--green) 30%, transparent);
+  --green-20: color-mix(in srgb, var(--green) 20%, transparent);
+  --green-10: color-mix(in srgb, var(--green) 10%, transparent);
+
+  --amber-70: color-mix(in srgb, var(--amber) 70%, transparent);
+  --amber-40: color-mix(in srgb, var(--amber) 40%, transparent);
+  --amber-30: color-mix(in srgb, var(--amber) 30%, transparent);
+  --amber-10: color-mix(in srgb, var(--amber) 10%, transparent);
+
+  --red-70: color-mix(in srgb, var(--red) 70%, transparent);
+  --red-60: color-mix(in srgb, var(--red) 60%, transparent);
+  --red-40: color-mix(in srgb, var(--red) 40%, transparent);
+  --red-30: color-mix(in srgb, var(--red) 30%, transparent);
+  --red-10: color-mix(in srgb, var(--red) 10%, transparent);
+
+  --white-20: color-mix(in srgb, var(--white) 20%, transparent);
+  --white-15: color-mix(in srgb, var(--white) 15%, transparent);
+  --white-10: color-mix(in srgb, var(--white) 10%, transparent);
+  --white-5: color-mix(in srgb, var(--white) 5%, transparent);
+
+  --card-60: color-mix(in srgb, var(--card) 60%, transparent);
+  --card-50: color-mix(in srgb, var(--card) 50%, transparent);
+  --nav-bg: color-mix(in srgb, var(--bg) 95%, transparent);
+  --overlay: color-mix(in srgb, var(--black) 65%, transparent);
+
+  /* Tipografía */
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+
+  --font-size-brand: 48px;
+  --font-size-metric-xl: 44px;
+  --font-size-total: 36px;
+  --font-size-public-title: 36px;
+  --font-size-screen-title: 34px;
+  --font-size-metric: 28px;
+  --font-size-highlight: 24px;
+  --font-size-card-title: 20px;
+  --font-size-calendar-day: 20px;
+  --font-size-message: 17px;
+  --font-size-base: 16px;
+  --font-size-form: 15px;
+  --font-size-small: 14px;
+  --font-size-aux: 13px;
+  --font-size-tiny: 12px;
+  --font-size-eyebrow: 11px;
+  --font-size-nav: 11px;
+  --font-size-badge: 10px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  --line-brand: 0.95;
+  --line-public-title: 1.02;
+  --line-screen-title: 1;
+  --line-snug: 1.375;
+  --line-relaxed: 1.625;
+
+  --tracking-brand: -0.04em;
+  --tracking-title: -0.035em;
+  --tracking-card: -0.025em;
+  --tracking-label: 0.12em;
+  --tracking-eyebrow: 0.16em;
+
+  /* Radios */
+  --radius-card: 16px;
+  --radius-card-agenda: 16px;
+  --radius-card-financial: 24px;
+  --radius-warning: 12px;
+  --radius-toast: 16px;
+  --radius-sheet: 28px;
+  --radius-shell: 40px;
+  --radius-button: 16px;
+  --radius-button-card: 12px;
+  --radius-button-request: 16px;
+  --radius-button-slot: 12px;
+  --radius-button-toast: 12px;
+  --radius-input: 12px;
+  --radius-input-time: 8px;
+  --radius-segment: 12px;
+  --radius-segment-option: 8px;
+  --radius-chart: 2px;
+  --radius-pill: 9999px;
+
+  /* Alturas y tamaños */
+  --height-button: 48px;
+  --height-button-compact: 40px;
+  --height-button-request: 44px;
+  --height-button-slot: 44px;
+  --height-button-toast: 36px;
+  --height-icon-button: 40px;
+  --height-icon-button-lg: 48px;
+  --height-input: 48px;
+  --height-input-time: 40px;
+  --height-segment: 48px;
+  --height-segment-option: 40px;
+  --height-switch: 28px;
+  --width-switch: 48px;
+  --size-switch-knob: 20px;
+  --width-sheet-handle: 40px;
+  --height-sheet-handle: 4px;
+  --height-badge: 16px;
+  --height-nav: 64px;
+  --width-shell: 900px;
+  --max-height-sheet: 90dvh;
+  --size-icon: 20px;
+  --size-icon-nav: 22px;
+  --size-icon-main: 18px;
+  --size-icon-compact: 14px;
+  --size-icon-confirmation: 26px;
+  --size-logo: 210px;
+  --size-avatar: 56px;
+
+  /* Espaciados */
+  --space-screen-x: 24px;
+  --space-screen-x-wide: 28px;
+  --space-screen-top: 56px;
+  --space-login-top: 48px;
+  --space-confirm-top: 80px;
+  --space-screen-bottom: 24px;
+  --space-title-content: 28px;
+  --space-section: 36px;
+  --space-section-lg: 40px;
+  --space-gap-sm: 8px;
+  --space-gap: 12px;
+  --space-gap-lg: 16px;
+  --space-chart-gap: 3px;
+  --space-card: 20px;
+  --space-card-agenda: 16px;
+  --space-card-financial: 24px;
+  --space-warning: 14px;
+  --space-toast-vertical: 14px;
+  --space-toast-left: 16px;
+  --space-sheet-top: 12px;
+  --space-sheet-x: 24px;
+  --space-sheet-bottom: 32px;
+  --padding-button-x: 20px;
+  --padding-button-compact-x: 12px;
+  --padding-chip-y: 6px;
+  --padding-chip-x: 14px;
+
+  /* Sombras y desenfoques */
+  --shadow-shell: 0 40px 120px rgba(0, 0, 0, 0.7);
+  --shadow-logo: 0 24px 40px rgba(0, 0, 0, 0.6);
+  --shadow-toast: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --blur-nav: 8px;
+
+  /* Movimiento y opacidades */
+  --motion-sheet: 280ms;
+  --motion-fade: 200ms;
+  --ease-sheet: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-fade: ease-out;
+  --scale-press: 0.98;
+  --scale-press-compact: 0.97;
+  --opacity-disabled: 0.35;
+  --opacity-attended: 0.6;
+  --opacity-inactive: 0.7;
+  --opacity-nav: 0.95;
+  --z-nav: 40;
+  --z-overlay: 60;
+  --z-sheet: 70;
+  --z-toast: 80;
+}
+
+/*
+ * Mapeo a Tailwind (v4). Permite clases como bg-card, text-secondary,
+ * border-line, bg-green-10 o bg-nav sin hexadecimales en los componentes.
+ */
+@theme inline {
+  --color-bg-outer: var(--bg-outer);
+  --color-app: var(--bg);
+  --color-card: var(--card);
+  --color-elevated: var(--elevated);
+  --color-line: var(--border);
+  --color-text: var(--text);
+  --color-secondary: var(--text-2);
+  --color-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-ink: var(--ink);
+  --color-green: var(--green);
+  --color-amber: var(--amber);
+  --color-red: var(--red);
+  --color-white: var(--white);
+  --color-black: var(--black);
+
+  --color-accent-60: var(--accent-60);
+  --color-accent-40: var(--accent-40);
+  --color-accent-20: var(--accent-20);
+
+  --color-green-40: var(--green-40);
+  --color-green-30: var(--green-30);
+  --color-green-20: var(--green-20);
+  --color-green-10: var(--green-10);
+
+  --color-amber-70: var(--amber-70);
+  --color-amber-40: var(--amber-40);
+  --color-amber-30: var(--amber-30);
+  --color-amber-10: var(--amber-10);
+
+  --color-red-70: var(--red-70);
+  --color-red-60: var(--red-60);
+  --color-red-40: var(--red-40);
+  --color-red-30: var(--red-30);
+  --color-red-10: var(--red-10);
+
+  --color-white-20: var(--white-20);
+  --color-white-15: var(--white-15);
+  --color-white-10: var(--white-10);
+  --color-white-5: var(--white-5);
+
+  --color-card-60: var(--card-60);
+  --color-card-50: var(--card-50);
+  --color-nav: var(--nav-bg);
+  --color-overlay: var(--overlay);
+}

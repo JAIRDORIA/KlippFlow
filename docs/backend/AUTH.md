@@ -1,0 +1,294 @@
+# Autenticación — BarberApp Backend
+
+Base URL local: `http://localhost:3000`
+
+Todos los endpoints reciben y devuelven JSON (`Content-Type: application/json`).
+El `ValidationPipe` global usa `whitelist`, `forbidNonWhitelisted` y `transform`.
+
+---
+
+## POST /auth/login/cliente
+
+Inicia sesión como cliente.
+
+### Request
+
+```json
+{
+  "username": "admin",
+  "password": "TuClave123"
+}
+```
+
+| Campo | Tipo | Reglas |
+|---|---|---|
+| `username` | string | obligatorio |
+| `password` | string | obligatorio, mínimo 6 caracteres |
+
+### Respuesta 200
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "cliente": {
+    "id": 1,
+    "nombres": "Admin",
+    "apellidos": "Prueba",
+    "username": "admin",
+    "correoVerificado": true
+  }
+}
+```
+
+### Errores
+
+- **401** `{ "message": "Usuario o contraseña incorrectos", "error": "Unauthorized", "statusCode": 401 }`
+  si el usuario no existe o la contraseña es incorrecta (mismo mensaje en ambos casos).
+- **400** si el body no valida (campo faltante, tipo incorrecto, contraseña menor a 6 caracteres o campos no permitidos).
+
+---
+
+## POST /auth/login/barbero
+
+Inicia sesión como barbero.
+
+### Request
+
+```json
+{
+  "username": "barbero1",
+  "password": "Barbero2026"
+}
+```
+
+| Campo | Tipo | Reglas |
+|---|---|---|
+| `username` | string | obligatorio |
+| `password` | string | obligatorio, mínimo 6 caracteres |
+
+### Respuesta 200
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "barbero": {
+    "id": 1,
+    "codigoUnico": "BARB-0001",
+    "nombres": "Barbero",
+    "apellidos": "Prueba",
+    "nombreBarberia": "Barbería Demo",
+    "username": "barbero1",
+    "estadoCuenta": "activo"
+  }
+}
+```
+
+`estadoCuenta` puede ser `activo`, `suspendido` o `vencido`.
+
+### Errores
+
+- **401** `{ "message": "Usuario o contraseña incorrectos", "error": "Unauthorized", "statusCode": 401 }`
+  si el usuario no existe o la contraseña es incorrecta. Es el mismo mensaje en
+  ambos casos para evitar la enumeración de usuarios.
+- **403** `{ "message": "Tu cuenta está suspendida o vencida. Comunícate con el administrador de la plataforma.", "error": "Forbidden", "statusCode": 403 }`
+  si las credenciales son correctas pero `estado_cuenta` es `suspendido` o
+  `vencido`.
+- **400** si el body no valida (campo faltante, tipo incorrecto, contraseña menor
+  a 6 caracteres o campos no permitidos).
+
+> El estado de la cuenta se valida **después** de comprobar la contraseña, para
+> no revelar el estado de una cuenta a quien no conoce su clave.
+
+### Orden de validación del caso de uso
+
+1. Buscar el barbero por `username`.
+2. Comparar la contraseña con `password_hash` (bcrypt).
+3. Verificar que `estadoCuenta === 'activo'`.
+4. Firmar el JWT.
+5. Devolver el token y los datos del barbero.
+
+---
+
+## POST /auth/login/admin
+
+Inicia sesión como administrador de la plataforma (Jair). Los admins se crean a
+mano con SQL en la tabla `admins` (ver `docs/ADMIN.md`); no hay registro.
+
+### Request
+
+```json
+{
+  "username": "admin_jair",
+  "password": "TuClaveSegura"
+}
+```
+
+### Respuesta 200
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "admin": {
+    "id": 1,
+    "username": "admin_jair",
+    "nombre": "Jair"
+  }
+}
+```
+
+### Errores
+
+- **401** `{ "message": "Usuario o contraseña incorrectos", ... }` si el admin
+  no existe o la contraseña es incorrecta. El mismo mensaje en ambos casos y se
+  ejecuta bcrypt igualmente (hash dummy si el admin no existe) para no dejar un
+  canal por tiempos.
+- **403** si las credenciales son correctas pero `activo = 0`. Se valida
+  **después** de comprobar la contraseña.
+- **429** con más de **5 intentos por minuto por IP**.
+
+El token de admin usa `ADMIN_JWT_EXPIRES_IN` (opcional, por defecto `2h`) y el
+mismo `JWT_SECRET`.
+
+---
+
+## JWT
+
+Payload firmado:
+
+```json
+{
+  "sub": 1,
+  "tipo": "cliente",
+  "username": "admin"
+}
+```
+
+`tipo` es `'cliente'`, `'barbero'` o `'admin'`. Los endpoints protegidos reciben
+el token con `Authorization: Bearer <accessToken>` y usan
+`@UseGuards(JwtAuthGuard)`. Para restringir por rol se usa
+`@UseGuards(JwtAuthGuard, RolesGuard)` junto con `@Roles('barbero')`,
+`@Roles('cliente')` o `@Roles('admin')`.
+
+`JwtStrategy` valida la firma y la expiración y además, en **cada petición**:
+
+- Si `tipo = 'barbero'`: consulta el barbero por PK y exige
+  `estado_cuenta = 'activo'`; si no, **403 `Cuenta no activa`**.
+- Si `tipo = 'admin'`: consulta el admin por PK y exige `activo = 1`; si no,
+  **401**.
+
+Así una suspensión o desactivación surte efecto de inmediato aunque el token
+siga vigente.
+
+---
+
+## Ejemplos con curl
+
+### Login de barbero correcto
+
+```bash
+curl -i -X POST http://localhost:3000/auth/login/barbero \
+  -H "Content-Type: application/json" \
+  -d '{"username":"barbero1","password":"Barbero2026"}'
+```
+
+### Contraseña incorrecta
+
+```bash
+curl -i -X POST http://localhost:3000/auth/login/barbero \
+  -H "Content-Type: application/json" \
+  -d '{"username":"barbero1","password":"ClaveIncorrecta"}'
+```
+
+### Usuario inexistente
+
+```bash
+curl -i -X POST http://localhost:3000/auth/login/barbero \
+  -H "Content-Type: application/json" \
+  -d '{"username":"noexiste","password":"Barbero2026"}'
+```
+
+### Body inválido
+
+```bash
+curl -i -X POST http://localhost:3000/auth/login/barbero \
+  -H "Content-Type: application/json" \
+  -d '{"username":"barbero1","password":"123"}'
+```
+
+### Cuenta suspendida (requiere UPDATE manual previo)
+
+```bash
+curl -i -X POST http://localhost:3000/auth/login/barbero \
+  -H "Content-Type: application/json" \
+  -d '{"username":"barbero1","password":"Barbero2026"}'
+```
+
+---
+
+## Autorización por rol
+
+### Piezas disponibles
+
+| Pieza | Ubicación | Función |
+|---|---|---|
+| `JwtAuthGuard` | `src/modules/auth/infrastructure/guards/jwt-auth.guard.ts` | Valida el `Authorization: Bearer <token>` y deja el payload en `request.user`. |
+| `RolesGuard` | `src/common/guards/roles.guard.ts` | Lee los roles exigidos con `Reflector` y compara `request.user.tipo`. Sin roles requeridos deja pasar; sin usuario lanza `401`; con rol incorrecto lanza `403`. |
+| `@Roles(...)` | `src/common/decorators/roles.decorator.ts` | Declara los roles permitidos: `@Roles('barbero')`, `@Roles('cliente')`, `@Roles('admin')`. |
+| `@CurrentUser()` | `src/common/decorators/current-user.decorator.ts` | Devuelve el `JwtPayload` completo. Con una clave, devuelve solo esa propiedad: `@CurrentUser('sub')`. |
+| `@CurrentBarberoId()` | `src/common/decorators/current-barbero-id.decorator.ts` | Devuelve `request.user.sub` solo si `tipo === 'barbero'`; si no, `403`. |
+| `@CurrentClienteId()` | `src/common/decorators/current-cliente-id.decorator.ts` | Devuelve `request.user.sub` solo si `tipo === 'cliente'`; si no, `403`. |
+| `@CurrentAdminId()` | `src/common/decorators/current-admin-id.decorator.ts` | Devuelve `request.user.sub` solo si `tipo === 'admin'`; si no, `403`. |
+
+> **Regla multi-tenant:** el id del usuario se obtiene **siempre** del JWT con
+> `@CurrentBarberoId()` / `@CurrentClienteId()` (o `@CurrentUser('sub')`). Nunca
+> del body ni de parámetros de la URL.
+
+> **Orden de guards:** `JwtAuthGuard` siempre va primero, porque `RolesGuard` y
+> los decoradores de id leen `request.user`.
+> `@UseGuards(JwtAuthGuard, RolesGuard)`.
+
+### Ejemplo de uso en un controller
+
+```ts
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../auth/infrastructure/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { CurrentBarberoId } from '../../../common/decorators/current-barbero-id.decorator';
+
+@Controller('barberos')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('barbero')
+export class EjemploController {
+  @Get('mi-perfil')
+  miPerfil(@CurrentBarberoId() barberoId: number) {
+    // El id viene del JWT, no del body ni de la URL.
+    return this.casoDeUso.ejecutar(barberoId);
+  }
+}
+```
+
+### Endpoints temporales de validación
+
+Están en `src/modules/auth/infrastructure/http/auth-test.controller.ts`, marcados
+con `// TEMPORAL - eliminar tras validar guards`:
+
+| Endpoint | Guards | Respuesta correcta |
+|---|---|---|
+| `GET /auth-test/yo` | `JwtAuthGuard` | `200` con el payload del JWT |
+| `GET /auth-test/solo-barbero` | `JwtAuthGuard, RolesGuard` + `@Roles('barbero')` | `200 { mensaje: 'ok barbero', barberoId }` |
+| `GET /auth-test/solo-cliente` | `JwtAuthGuard, RolesGuard` + `@Roles('cliente')` | `200 { mensaje: 'ok cliente', clienteId }` |
+
+Casos de error: sin token → `401`; token válido con rol equivocado → `403`
+`{ "message": "No tienes permisos para esta acción", "statusCode": 403 }`.
+
+---
+
+## Utilidad para generar hashes
+
+```bash
+node scripts/generar-hash.js MiClave
+```
+
+Imprime únicamente el hash bcrypt (10 rondas), listo para pegar en
+`password_hash`.
