@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
+
+# Vercel (se genera con `vercel link`; nunca se sube)
+.vercel
 
 # Editor directories and files
 .vscode/*

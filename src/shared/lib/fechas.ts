@@ -193,16 +193,19 @@ export function saludo(fecha: Date = new Date()): string {
   return 'Buenas noches'
 }
 
-/** "09:00" → "09:00 a. m."; "13:05" → "01:05 p. m.". */
+/**
+ * Formato de hora de toda la app: 12 h con `am`/`pm`, sin cero a la izquierda.
+ * `"09:00"` → `"9:00 am"`; `"13:05"` → `"1:05 pm"`; `"00:00"` → `"12:00 am"`.
+ */
 export function hora12(hora24: string): string {
   const coincidencia = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hora24)
   if (!coincidencia) return ''
 
   const horas = Number(coincidencia[1])
   const minutos = coincidencia[2] ?? '00'
-  const sufijo = horas < 12 ? 'a. m.' : 'p. m.'
+  const sufijo = horas < 12 ? 'am' : 'pm'
   const hora12Numerica = horas % 12 === 0 ? 12 : horas % 12
-  return `${pad2(hora12Numerica)}:${minutos} ${sufijo}`
+  return `${hora12Numerica}:${minutos} ${sufijo}`
 }
 
 /** Útil para pruebas y para construir fechas de calendario sin zona del equipo. */

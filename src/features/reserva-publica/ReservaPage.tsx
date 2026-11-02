@@ -1,14 +1,15 @@
 import { ArrowRight, Plus } from 'lucide-react'
 import { useMemo, useReducer, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTituloPagina } from '@/app/useTituloPagina'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Input } from '@/shared/ui/Input'
-import { LogoKlippFlow } from '@/shared/ui/LogoKlippFlow'
+import { Logo } from '@/shared/ui/Logo'
 import { Money } from '@/shared/ui/Money'
 import { Segmented } from '@/shared/ui/Segmented'
 import { Skeleton } from '@/shared/ui/Skeleton'
-import { guardarCitaCliente, obtenerCitaActivaDeCodigo } from './almacenamientoCitas'
+import { guardarCitaCliente } from './almacenamientoCitas'
 import { DiaSelector } from './components/DiaSelector'
 import { SelectorServiciosAcompanante } from './components/SelectorServiciosAcompanante'
 import { SlotButton } from './components/SlotButton'
@@ -31,7 +32,13 @@ import type {
   AccionFormularioReserva,
   CampoDatos,
 } from './domain/formulario'
-import { useBarberoPublico, useCrearCita, useDisponibilidad } from './hooks'
+import {
+  useBarberoPublico,
+  useCitaActiva,
+  useCrearCita,
+  useDisponibilidad,
+} from './hooks'
+import { hoyBogota } from '@/shared/lib/fechas'
 import type { BarberoPublico } from './types'
 import { construirCuerpoCrearCita, crearEstadoInicial } from './domain/formulario'
 import { useDebouncedValue } from './useDebouncedValue'
@@ -45,6 +52,9 @@ function ReservaPage() {
 
 function ContenidoReserva({ codigo }: { codigo: string }) {
   const consulta = useBarberoPublico(codigo)
+  useTituloPagina({
+    barberia: consulta.data?.nombreBarberia ?? consulta.data?.nombres ?? null,
+  })
 
   if (consulta.isPending) return <ReservaCargando />
 
@@ -83,7 +93,7 @@ function BarberiaNoEncontrada() {
   return (
     <main className="screen flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
       <div className="mx-auto flex w-full max-w-[520px] flex-col">
-        <LogoKlippFlow tamano={44} />
+        <Logo tamano="sm" />
         <EmptyState
           className="mt-8"
           titulo="No encontramos esta barbería"
@@ -104,7 +114,7 @@ function ErrorCarga({
   return (
     <main className="screen flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
       <div className="mx-auto flex w-full max-w-[520px] flex-col">
-        <LogoKlippFlow tamano={44} />
+        <Logo tamano="sm" />
         <EmptyState
           className="mt-8"
           titulo={titulo}
@@ -142,7 +152,8 @@ function FormularioReserva({
   })
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const mutacion = useCrearCita(codigo)
-  const citaActiva = useMemo(() => obtenerCitaActivaDeCodigo(codigo), [codigo])
+  // Aviso validado contra el servidor: desaparece cuando la cita ya terminó.
+  const citaActiva = useCitaActiva(codigo, hoyBogota())
 
   const totales = calcularTotales(seleccionParaTotales(form), barbero.servicios)
   const errores = validarDatos(form.datos)
@@ -227,7 +238,7 @@ function FormularioReserva({
         <div className="screen flex-1">
           <div className="mx-auto flex w-full max-w-[520px] flex-col gap-10">
             <header className="flex flex-col gap-4">
-              <LogoKlippFlow tamano={44} />
+              <Logo tamano="sm" />
               <div>
                 <h1 className="type-public-title break-words">{titulo}</h1>
                 <p className="type-form mt-4 text-secondary">

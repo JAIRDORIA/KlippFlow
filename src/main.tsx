@@ -7,9 +7,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
-import { registerSW } from 'virtual:pwa-register'
 import { router } from './app/router'
 import { AuthProvider } from './features/auth/AuthProvider'
+import { PwaProvider } from './features/pwa/PwaProvider'
+import { ErrorBoundary } from './shared/ui/ErrorBoundary'
 import { ToastProvider } from './shared/ui/ToastProvider'
 import './styles/globals.css'
 
@@ -35,8 +36,7 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-// Registro propio y actualización automática (registerType: 'autoUpdate').
-registerSW({ immediate: true })
+// Registro del service worker y avisos de PWA: los maneja `PwaProvider`.
 
 const raiz = document.getElementById('root')
 if (!raiz) {
@@ -45,14 +45,18 @@ if (!raiz) {
 
 createRoot(raiz).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <AuthProvider>
-          <div className="app-shell">
-            <RouterProvider router={router} />
-          </div>
-        </AuthProvider>
-      </ToastProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <PwaProvider>
+            <AuthProvider>
+              <div className="app-shell">
+                <RouterProvider router={router} />
+              </div>
+            </AuthProvider>
+          </PwaProvider>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

@@ -85,3 +85,20 @@ export function obtenerCitaActivaDeCodigo(codigo: string): CitaGuardada | null {
 export function obtenerCitaGuardadaPorToken(token: string): CitaGuardada | null {
   return leerCitasGuardadas().find((cita) => cita.token === token) ?? null
 }
+
+/**
+ * Borra una cita del historial local. Se usa cuando el servidor confirma que ya
+ * terminó (atendida, cancelada, rechazada, expirada, no asistió, o día pasado),
+ * para que el aviso "Tienes una cita pendiente" no vuelva a aparecer. Nunca lanza.
+ */
+export function olvidarCitaGuardada(token: string): void {
+  const almacen = obtenerAlmacen()
+  if (!almacen) return
+
+  try {
+    const restantes = leerCitasGuardadas().filter((cita) => cita.token !== token)
+    almacen.setItem(CLAVE_CITAS_CLIENTE, JSON.stringify(restantes))
+  } catch {
+    // Sin almacenamiento no hay nada que borrar.
+  }
+}

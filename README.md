@@ -4,17 +4,17 @@ Aplicación web (PWA) para que un barbero gestione sus citas, su caja y su agend
 desde el teléfono. Este repositorio es **solo el frontend**; el backend vive en
 otro proyecto y expone la API descrita en `docs/backend/`.
 
-Estado actual: **Prompt 2 del frontend**. La reserva pública (`/b`,
-`/b/:codigo`) y el seguimiento (`/cita/:token`) son reales. Las pantallas del
-barbero y del admin siguen como marcadores de posición. Ver
-`PROJECT_CONTEXT.md` y `docs/RESERVA_PUBLICA.md` para el detalle.
+Estado actual: **frontend completo (Prompt 8)**. Reserva pública, panel del
+barbero (Hoy, Solicitudes, Cuentas, Compras y Ajustes), notificaciones push y
+panel de administración son reales. Ver `PROJECT_CONTEXT.md`,
+`docs/DESPLIEGUE_FRONTEND.md` y `docs/PWA.md` para el detalle.
 
 ## Requisitos
 
-- Node.js 24.15 o superior (probado con 24.19.0).
-- pnpm 12 o superior (probado con 12.15.0).
-- Backend local disponible para el login real; por defecto se espera en
-  `http://localhost:3000`.
+- Node.js 22.17 o superior (probado con 22.17 y 24.19).
+- pnpm 9 o superior (probado con 11.23; el lockfile es v9).
+- Backend disponible para el login real; en local se espera en
+  `http://localhost:3000` y en producción en la URL de Clever Cloud.
 
 ## Puesta en marcha
 
@@ -115,7 +115,8 @@ barbero. Una ruta desconocida muestra “Página no encontrada”.
 - `vite-plugin-pwa` con estrategia `injectManifest` y service worker propio.
 - Manifest: nombre/corto “KlippFlow”, `lang` es-CO, `display: standalone`,
   orientación vertical, `theme_color` y `background_color` `#0D0D0E`.
-- Registro automático y actualización automática (`registerType: 'autoUpdate'`).
+- Registro automático del service worker y actualización en modo `prompt`:
+  la versión nueva espera y se activa cuando el usuario pulsa “Actualizar”.
 - Precache de assets, `push`, `notificationclick` y aviso a las pestañas
   abiertas para refrescar datos.
 - El service worker solo se activa en el build de producción (`pnpm preview`).
@@ -130,6 +131,12 @@ El logo de la pantalla de login también es provisional: un círculo `--ink` con
 una “K” en `--accent` (`src/shared/ui/LogoKlippFlow.tsx`). Cuando exista el logo
 real, colócalo en **`public/logo-klippflow.svg`** (o el master que entregue
 diseño) y reemplaza ese componente por un `<img>` con esa ruta.
+
+## Despliegue
+
+El frontend se publica en Vercel con `vercel.json` (rewrites de SPA, caché y
+cabeceras). Los pasos, las variables `VITE_*` y los cambios necesarios en el
+backend están en **`docs/DESPLIEGUE_FRONTEND.md`**.
 
 ## Documentación fuente de verdad
 

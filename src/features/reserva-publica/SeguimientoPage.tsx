@@ -1,7 +1,8 @@
 import { Check, Clock, Copy, UserX, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { fechaLarga } from '@/shared/lib/fechas'
+import { useTituloPagina } from '@/app/useTituloPagina'
+import { fechaLarga, hora12 } from '@/shared/lib/fechas'
 import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Money } from '@/shared/ui/Money'
@@ -40,6 +41,7 @@ function IconoEstado({ icono }: { icono: IconoSeguimiento }) {
 }
 
 function SeguimientoPage() {
+  useTituloPagina()
   const { token: parametro = '' } = useParams()
   const token = parametro.trim()
 
@@ -130,7 +132,7 @@ function DetalleSeguimiento({
             <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
               <dt className="type-helper">Hora</dt>
               <dd className="font-mono text-[var(--font-size-small)] text-text">
-                {cita.horaInicio} – {cita.horaFin}
+                {hora12(cita.horaInicio)} – {hora12(cita.horaFin)}
               </dd>
             </div>
 

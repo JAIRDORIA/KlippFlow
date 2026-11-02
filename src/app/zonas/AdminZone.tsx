@@ -1,36 +1,29 @@
 import { Route, Routes } from 'react-router-dom'
+import { AdminListaPage } from '@/features/admin/AdminListaPage'
+import { AdminLoginPage } from '@/features/admin/AdminLoginPage'
+import { AdminAuthProvider } from '@/features/auth/AdminAuthProvider'
+import { ProtectedAdminRoute } from '@/features/auth/ProtectedAdminRoute'
 import { AdminLayout } from '../layouts/AdminLayout'
 import { NoEncontrada } from '../NoEncontrada'
-import { PantallaEnConstruccion } from '../PantallaEnConstruccion'
 
 export default function AdminZone() {
   return (
-    <Routes>
-      <Route path="admin" element={<AdminLayout />}>
+    <AdminAuthProvider>
+      <Routes>
+        <Route path="admin/login" element={<AdminLoginPage />} />
+
         <Route
-          index
-          element={<PantallaEnConstruccion eyebrow="PLATAFORMA" titulo="Barberos" />}
-        />
-        <Route
-          path="login"
+          path="admin"
           element={
-            <PantallaEnConstruccion
-              eyebrow="ADMINISTRACIÓN"
-              titulo="Acceso de administrador"
-            />
+            <ProtectedAdminRoute>
+              <AdminLayout />
+            </ProtectedAdminRoute>
           }
-        />
-        <Route
-          path="barberos/:id"
-          element={
-            <PantallaEnConstruccion
-              eyebrow="ADMINISTRACIÓN"
-              titulo="Detalle del barbero"
-            />
-          }
-        />
-        <Route path="*" element={<NoEncontrada />} />
-      </Route>
-    </Routes>
+        >
+          <Route index element={<AdminListaPage />} />
+          <Route path="*" element={<NoEncontrada />} />
+        </Route>
+      </Routes>
+    </AdminAuthProvider>
   )
 }

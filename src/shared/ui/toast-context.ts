@@ -2,7 +2,13 @@ import { createContext, useContext } from 'react'
 
 export interface AccionToast {
   etiqueta: string
-  onClick: () => void
+  /** Acción con manejador: se ejecuta y cierra el toast. */
+  onClick?: () => void
+  /**
+   * Acción con enlace real. Se renderiza como `<a target="_blank">` para que
+   * abrir WhatsApp no dependa de `window.open` después de una promesa.
+   */
+  href?: string
 }
 
 export interface OpcionesToast {

@@ -62,6 +62,7 @@ export function BottomNav({
                       {conBadge && (
                         <Badge
                           cantidad={solicitudesPendientes}
+                          maximo={9}
                           className="absolute -right-3 -top-2"
                         />
                       )}

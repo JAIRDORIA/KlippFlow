@@ -12,20 +12,31 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: false,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+        // logo-1024.png no se usa (el logo de la UI es el de 512): fuera del
+        // precache para no inflar la instalación.
+        globIgnores: ['**/logo-1024.png'],
+      },
+      // Service worker también en desarrollo (módulo) para poder probar push en
+      // localhost. El precache se omite allí porque el manifiesto viene vacío.
+      devOptions: {
+        enabled: true,
+        type: 'module',
       },
       manifest: {
         name: 'KlippFlow',
         short_name: 'KlippFlow',
-        description: 'Tus citas, tu caja y tu agenda. Un solo lugar, en tu bolsillo.',
+        description:
+          'Agenda, caja y avisos para barberos. Tus clientes reservan sin crear cuenta.',
         lang: 'es-CO',
-        start_url: '/',
+        start_url: '/app',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
+        // #0D0D0E = --bg de src/styles/tokens.css (theme-color de la PWA).
         theme_color: '#0D0D0E',
         background_color: '#0D0D0E',
         icons: [
@@ -42,7 +53,7 @@ export default defineConfig({
             purpose: 'any',
           },
           {
-            src: '/icons/maskable-512.png',
+            src: '/icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

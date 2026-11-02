@@ -39,6 +39,14 @@ export interface SesionBarbero {
   nombreBarberia: string | null
 }
 
+/** Sesión del panel, guardada aparte en `klippflow.admin.sesion`. */
+export interface SesionAdmin {
+  accessToken: string
+  id: number
+  username: string
+  nombre: string
+}
+
 export interface PayloadJwt {
   sub?: number
   tipo?: TipoToken

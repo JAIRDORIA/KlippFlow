@@ -245,3 +245,162 @@ Diseño propio del panel, mismo estilo visual, pensado para móvil y escritorio.
 - Verificado contra el backend: el horizonte es hoy + 7 días inclusive (8 fechas); las horas de hoy anteriores a `ahora + 30 min` se omiten de la disponibilidad; la API acepta entre 1 y 10 servicios por persona.
 - El backend permite varios servicios por acompañante, aunque el copy original de 6.10 decía uno. La UI permite selección múltiple por acompañante, con máximo 10 por persona.
 - `GET /public/citas/:token` no devuelve los servicios de la cita. El seguimiento omite la fila “Servicios” y muestra solo Fecha, Hora y Total, para no inventar campos.
+
+### Discrepancias del Prompt 3 (Hoy y Solicitudes) frente a `docs/backend/`
+
+- **6.3 contador "Libres":** el backend no expone ese conteo.
+  `resumen` solo trae `citasHoy`, `aceptadas`, `atendidas`, `noAsistio` y
+  `solicitudesPendientes`, y `huecosLibres` viene como arreglo de rangos (sin
+  conteo ni minutos). Decisión del dueño (2026-10-30): se quita el contador
+  "Libres" y se muestra **Atendidos** (`resumen.atendidas`). "Por atender" usa
+  `resumen.aceptadas`.
+- **6.3 "Hijo (8 años)":** el contrato no tiene edades. La línea de acompañantes
+  muestra solo `personas[].nombre` (que puede ser `null`) y los servicios.
+- **6.3 documento del DTO:** `BARBERO_SOLICITUDES_Y_DASHBOARD.md` escribe
+  `"...": "resto del DTO de cita"` en el dashboard. Se usa el DTO documentado en
+  la sección de solicitudes más `puedeMarcarNoAsistio` y `atencion`, sin añadir
+  campos.
+- **6.4 "refresca Hoy y Cuentas":** Cuentas todavía no existe. Se invalida
+  `['barbero','balance','hoy']` (clave reservada) para que el prompt de Cuentas
+  la consuma sin cambios.
+- **6.5 "Avisar" tras no asistió:** el backend no devuelve `whatsappUrl` en
+  `POST /barbero/citas/:id/no-asistio`. Ese toast no muestra el botón; solo
+  aceptar, rechazar y cancelar lo muestran.
+- **6.6 mensaje de expiración:** la API responde
+  `Esta solicitud expiró (pasaron más de 2 horas)`; la UI lo normaliza a
+  "Esta solicitud ya expiró" al aceptar o rechazar. Los demás 409 conservan el
+  texto de la API.
+- **7 mensaje 404:** el diseño pide "No encontrado" genérico; el backend
+  distingue `Cita no encontrada` y `Atención no encontrada`. Se muestra el
+  mensaje de la API.
+- **Corrección de propina:** se valida contra `atenciones.fecha_balance`, no
+  contra `citas.fecha`. El dashboard solo lista citas de hoy, así que la opción
+  se ofrece siempre en la línea "Atendido" y, si el backend responde 409, se
+  muestra su mensaje sin cambiar nada.
+
+### Discrepancias del Prompt 4 (Cuentas y Compras) frente a `docs/backend/`
+
+- **6.7 anticipos y devoluciones:** el diseño no los muestra y el backend los
+  devuelve en `balance/hoy` y en el historial, pero en la Fase 1 **siempre valen
+  0** ("existen pero valen 0 hasta la Fase 2"). Se ignoran en la UI.
+- **6.7 contenido del balance:** el diseño dice "Servicios cobrados (+),
+  Propinas (+), Compras de insumos (−, en rojo)". El backend confirma
+  `ganancia_neta = total_servicios + total_propinas − total_compras`; los
+  anticipos y devoluciones no entran en esa fórmula en la Fase 1.
+- **6.7 lista de días:** el diseño no aclara si se muestran todos los días o solo
+  los que tienen movimiento. La API devuelve **30 filas siempre** (hoy incluido,
+  ceros para los días sin fila), así que la lista muestra los 29 días anteriores
+  y solo cae al vacío "Aún no hay movimientos" cuando **todo** el historial está
+  en cero.
+- **6.7 / 6.8 totales:** el diseño no dice de dónde sale el total del día en
+  Compras. Se usa el campo `total` que calcula el servidor, no una suma local.
+- **6.8 409 de compras:** el diseño dice "se muestra el mensaje". El prompt de
+  este paso fija el texto "Esta compra ya no se puede modificar", mientras el
+  backend responde "Solo puedes modificar una compra el mismo día en que se
+  registró" (y "…eliminar…" para el DELETE). Se usa el texto pedido en el prompt.
+- **6.8 límite de la descripción:** el diseño dice "hasta 150 caracteres". No se
+  usa `maxLength`: se deja escribir de más para poder explicar el límite y el
+  formulario queda inválido por encima de 150.
+- **6.8 `GET /barbero/compras`:** el diseño no menciona el filtro por fecha. La
+  pantalla siempre consulta el día de Bogotá con `?fecha=` (el backend exige que
+  esté dentro de los últimos 30 días y no sea futura).
+
+### Discrepancias del Prompt 5 (Ajustes) frente a `docs/backend/`
+
+- **6.9 "Compartir":** el diseño pide un botón "Compartir" que use el menú nativo
+  del teléfono. Este prompt pide en su lugar "Ver como cliente" abriendo
+  `/b/{codigo}` en pestaña nueva, así que se implementó eso.
+- **6.9 "Ver desactivados":** el diseño propone un enlace discreto para ver los
+  inactivos. El prompt pide mostrarlos siempre, atenuados y al final de la lista
+  con la etiqueta "Inactivo". Se implementó lo del prompt.
+- **6.9 guardado automático:** el diseño dice "guardado automático al cerrar el
+  selector de hora"; el prompt exige guardado explícito por día. Se implementó un
+  botón "Guardar" por día (con "Descartar") y los errores no pierden lo escrito.
+- **6.9 "día activado":** el backend no tiene un booleano por día. El interruptor
+  se deriva de los bloques (`activo`): apagarlo hace `PATCH { activo: false }` a
+  los bloques (conserva las horas) y encender un día sin bloques crea 09:00–13:00.
+  No se añadió ningún campo.
+- **6.9 "Antes de cerrar, anula la suscripción push":** push queda fuera de este
+  prompt. El punto de extensión `registrarAntesDeCerrarSesion` ya existe, pero
+  aquí no se registra ninguna tarea.
+- **6.9 eyebrow `{NOMBRE} · {BARBERÍA}`:** `nombreBarberia` es opcional en el
+  contrato; si viene `null` el eyebrow muestra solo el nombre del barbero.
+- **6.9 precio:** el diseño dice "PRECIO (entero)" sin máximo y `SERVICIOS.md`
+  solo documenta `precio >= 1`. No se valida un tope superior (no se inventa).
+- **§4 duración en servicios:** el diseño dice `90 min`; el prompt de este paso
+  pide `1 h 15 min` / `45 min`. Se usa el texto del prompt en la lista de
+  servicios.
+
+### Discrepancias del Prompt 6 (onboarding y push) frente a `docs/backend/`
+
+- **8 PWA "abre la URL del payload":** el payload real trae
+  `url: "/solicitudes"` (`NOTIFICACIONES_PUSH.md` §41), pero esa ruta no existe en
+  la app: la pantalla es `/app/solicitudes`. El service worker traduce esa ruta
+  heredada, exige el mismo origen y cae a `/app/solicitudes` con cualquier URL
+  externa.
+- **Payload:** el diseño no describe el JSON. El backend envía
+  `{ titulo, cuerpo, url }` (claves planas en español, sin `title`/`body`/`data`
+  ni `icon`). El service worker usa el ícono de la PWA.
+- **6.2 "Se muestra solo en iPhone fuera del modo instalado. En Android y
+  escritorio no aparece":** el prompt pide mostrar la activación de
+  notificaciones también en Android y escritorio (pantalla reducida, sin pasos de
+  instalación). Se implementó lo del prompt.
+- **6.2 "Hacerlo después":** el diseño solo dice que se guarda el descarte; el
+  prompt fija que se vuelva a ofrecer a las 24 h y que no se ofrezca si el
+  permiso ya está concedido o denegado.
+- **6.9 "Enviar prueba":** no se implementó (`POST /barbero/push/probar` queda
+  fuera de este prompt, que solo pide activar/desactivar).
+- **6.9 "Fila Instalar en tu iPhone":** el enlace a la guía vive dentro de la
+  tarjeta "Notificaciones" (estado "Requiere instalar la app") en lugar de ser una
+  fila aparte.
+- **Ruta del onboarding:** el prompt la llama `/app/instalar`; el mapa de rutas y
+  el router usan `/instalar`. Se mantiene `/instalar` como canónica y se añadió
+  `/app/instalar` como redirección.
+
+### Diseño del panel de administración (definido en el Prompt 7)
+
+No hay Figma para este panel: el diseño se fija aquí y se implementa con el mismo
+sistema visual (tokens, tipografías y kit).
+
+- **Contenedor:** `max-w-[900px]` centrado; usable a 390 px sin scroll
+  horizontal. Barra superior del `AdminLayout` con "KlippFlow · Administración" y
+  el nombre del admin.
+- **`/admin/login`:** eyebrow "SOLO ADMINISTRADOR", título "Administración",
+  logo provisional, Usuario y Contraseña (con ver/ocultar), "Entrar" y el error
+  del backend. Sin enlaces a otras partes de la app.
+- **`/admin`:** eyebrow "ADMINISTRACIÓN", título "Barberos", botón primario
+  "+ Nuevo barbero" y "Cerrar sesión" discreto. Debajo, buscador y cuatro chips
+  (Todos / Activos / Suspendidos / Vencidos) con su conteo, usando la variante
+  `hueso` para el activo. Filas en tarjeta con nombre, barbería, `usuario ·
+  código` en mono y píldora de estado. Skeleton al cargar, error con
+  "Reintentar", "Aún no hay barberos" y "Sin resultados" con "Limpiar filtros".
+- **Sheets:** el alta y el detalle son sheets (`Sheet` del kit, con foco
+  atrapado, Esc y retorno del foco). Toda acción destructiva o de estado pasa por
+  una confirmación explícita; ningún cambio se ejecuta con un solo toque.
+- **Datos de una sola vez:** bloque con usuario, contraseña, código y link, cada
+  uno con "Copiar", más "Copiar todo" (texto para WhatsApp) y el aviso "La
+  contraseña solo se muestra ahora". El bloque se anuncia con
+  `aria-live="polite"` al aparecer.
+- **Estados:** píldora verde/ámbar/rojo con el texto siempre visible (el color
+  nunca es la única señal), y una línea que explica el efecto del estado.
+
+### Discrepancias del Prompt 7 frente a `docs/backend/`
+
+- **6.12 "correo opcional":** `ADMIN.md` lo exige (`correo` es NOT NULL, email,
+  máximo 150). El formulario lo marca obligatorio.
+- **6.12 "campos de nombre":** el backend pide `nombres` y `apellidos` por
+  separado (1–100 cada uno); el prompt hablaba de "Nombre" en singular. El sheet
+  tiene los dos campos.
+- **6.12 "paginación con Cargar más":** no se implementa. El panel pide 50 (el
+  máximo del backend) para poder contar por estado y buscar por nombre, y avisa
+  "Mostrando los primeros 50 de N" si hay más. El prompt de este paso no pedía
+  paginación.
+- **6.12 "contraseña se muestra una sola vez":** el backend no genera ni devuelve
+  contraseñas; la escribe el panel. Se muestra una sola vez porque solo existe en
+  el estado del sheet.
+- **6.12 `/admin/barberos/:id`:** el prompt define el detalle como sheet, así que
+  esa ruta ya no existe. El cierre de sesión está en la cabecera de la lista.
+- **`PATCH /admin/barberos/:id/estado`:** `ADMIN.md` no documenta el cuerpo de la
+  respuesta; la UI no lo usa y aplica el estado elegido tras el 200.
+- **Orden de la lista:** el backend ordena por creación descendente; el panel
+  reordena por nombre como pide el prompt (todo en cliente).

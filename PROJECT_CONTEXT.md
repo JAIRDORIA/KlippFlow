@@ -1,6 +1,6 @@
 # PROJECT_CONTEXT — Frontend KlippFlow
 
-Última actualización: **2026-10-30** (Prompt 2 del frontend).
+Última actualización: **2026-10-31** (Prompt 8 del frontend: pulido de PWA).
 
 ## 1. Qué es
 
@@ -45,15 +45,96 @@ Completado:
   - Pantalla de seguimiento con todos los estados y copia del enlace.
   - Pruebas de dominio, almacenamiento y tiempos de Bogotá.
   - `docs/RESERVA_PUBLICA.md`.
+- Panel del barbero Hoy y Solicitudes (Prompt 3):
+  - `GET /barbero/dashboard/hoy` y `GET /barbero/solicitudes` con TanStack Query.
+  - Mutaciones aceptar, rechazar, cancelar, no asistió, atendido y corrección
+    de propina, con invalidación de agenda, solicitudes y la clave reservada
+    de balance.
+  - Pantalla Hoy: contadores, línea de tiempo con estados visuales, próxima
+    cita, contador de atendidos, horarios libres y bloques.
+  - Pantalla Solicitudes: orden por urgencia, cuenta regresiva viva cada 30 s,
+    acompañantes, aviso de descanso y badge en el `BottomNav` (9+).
+  - Sheets de atendido/propina, rechazo, cancelación y no asistió, con
+    "Avisar" como enlace real al `whatsappUrl`.
+  - Refresco por foco, cambio de pestaña, sondeo de 60 s visible y puente del
+    service worker.
+  - Pruebas de dominio de agenda, propina, errores, cuenta regresiva y fechas.
+  - `docs/AGENDA_Y_SOLICITUDES.md`.
+- Cuentas y Compras (Prompt 4):
+  - `GET /barbero/balance/hoy`, `GET /barbero/balance/historial` y CRUD de
+    compras, con claves que incluyen el día de Bogotá.
+  - Cuentas: tarjeta financiera (ganancia neta + servicios, propinas y compras),
+    gráfico de 30 barras sin librería y lista de días anteriores.
+  - Compras: formulario validado, lista de hoy con total del servidor y sheet de
+    edición con confirmación de borrado.
+  - `MoneyInput` extraído a `shared/ui` y utilidades de monto en
+    `shared/lib/montos.ts`, compartidas con la propina de Hoy.
+  - Las mutaciones de compras usan el `balance` que devuelve la API para
+    adelantar la caché e invalidan compras, balance e historial.
+  - Pruebas de dominio de balance, gráfico, lista, accesibilidad y compras.
+  - `docs/CUENTAS_Y_COMPRAS.md`.
+- Ajustes (Prompt 5):
+  - `GET /barbero/configuracion`, CRUD de servicios y CRUD de horarios.
+  - Link público con "Copiar" (con respaldo) y "Ver como cliente" en pestaña
+    nueva.
+  - Servicios: crear, editar, desactivar y reactivar, con validación exacta del
+    backend; los inactivos al final con etiqueta.
+  - Horarios: 7 filas de Lunes a Domingo, interruptor por día, varios bloques,
+    selector de hora nativo y guardado explícito por día con plan de
+    POST/PATCH/DELETE.
+  - Cerrar sesión con confirmación, limpieza de la caché de TanStack Query y
+    redirección al login.
+  - Pruebas de dominio de horas, bloques, solapes, servicios, plan de guardado,
+    errores y portapapeles.
+  - `docs/AJUSTES.md`.
+- Onboarding y notificaciones push (Prompt 6):
+  - `/instalar` con los cuatro pasos en iPhone sin instalar y activación sola en
+    iPhone instalado, Android y escritorio.
+  - `GET /barbero/push/llave-publica`, `POST` y `DELETE`
+    `/barbero/push/suscripciones` con re-sincronización idempotente al entrar y
+    baja al cerrar sesión.
+  - Service worker con `push` (payload real `{ titulo, cuerpo, url }`) y
+    `notificationclick` (enfoca o abre la app en `/app/solicitudes`).
+  - Tarjeta "Notificaciones" en Ajustes con estados, activar/desactivar y enlace
+    a la guía de instalación.
+  - Política de "Hacerlo después" de 24 h y detección de iOS/iPadOS, modo
+    instalado y soporte de push.
+  - Pruebas de dominio de VAPID, plataforma, decisión de onboarding, URL del
+    clic, suscripción y errores.
+  - `docs/NOTIFICACIONES.md`.
+- Panel de administración (Prompt 7):
+  - Sesión de admin separada (`klippflow.admin.sesion`), `AdminAuthProvider`,
+    `ProtectedAdminRoute` y `useAdminAuth`.
+  - `/admin/login` y `/admin` con buscador, chips con conteo y filas con estado.
+  - Crear barbero con contraseña provisional generada en el cliente
+    (`crypto.getRandomValues`) y entrega de datos de una sola vez.
+  - Cambio de estado con confirmación, rotación de código y restablecimiento de
+    contraseña, cada uno mostrando el resultado una sola vez.
+  - Los secretos viven solo en el estado de los sheets: nada en caché,
+    `localStorage` ni URL.
+  - Pruebas de dominio de contraseña, formulario, búsqueda, lista, estados,
+    errores, enlaces y texto de entrega, más la sesión del admin.
+  - `docs/ADMIN.md`.
+- Ajustes visuales (2026-10-31): contadores de Hoy en rejilla de 3 columnas iguales con etiquetas en una línea, horas siempre en formato 12 h con `am`/`pm` (helper `hora12`) y se quitó "Ver como cliente" de Ajustes.
+- Pulido de PWA (Prompt 8):
+  - Logo real (`public/icons/logo-512.png`) en un componente único `Logo`
+    (sm/md/lg) sobre baldosa hueso; fuera el placeholder y su código muerto.
+  - Manifest definitivo (`start_url: /app`, íconos `any` y `maskable`
+    separados) y `index.html` con favicons, `apple-touch-icon` y metas de iOS.
+  - Actualización del service worker en modo `prompt`: banda "Hay una versión
+    nueva" con "Actualizar"/"Ahora no", sin recargas automáticas, y
+    comprobación al volver a la app cada 30 min. Push intacto.
+  - 404 con logo y botón según la sesión, `ErrorBoundary` global y por zona, y
+    aviso "Sin conexión".
+  - Título del documento por ruta (`useTituloPagina` + `rutas.ts`), `noindex`
+    centralizado, `robots.txt` y `X-Robots-Tag`.
+  - `vercel.json` (rewrites, caché y cabeceras de seguridad) y `.env.example`
+    con las variables `VITE_`.
+  - `docs/PWA.md` y `docs/DESPLIEGUE_FRONTEND.md`.
 
 No implementado todavía:
 
-- Pantallas del barbero: Hoy, Solicitudes, Cuentas, Compras y Ajustes.
-- Panel de administración y su AuthProvider real.
-- Onboarding completo de instalación (`/instalar` sigue como marcador).
-- Suscripción/permiso push desde la UI; el service worker ya maneja `push` y
-  `notificationclick`.
-- Flujo real de notificaciones (activar, enviar prueba, desuscribir al cerrar).
+- "Enviar prueba" de notificaciones (`POST /barbero/push/probar`).
 - Pagos, verificación de celular y recordatorios (fuera de alcance de estos
   prompts).
 
@@ -65,7 +146,11 @@ src/
     router.tsx                 createBrowserRouter; /dev solo en DEV
     ZoneRouter.tsx             elige zona y carga su chunk con lazy
     RootRedirect.tsx           / según sesión
-    NoEncontrada.tsx           404 con enlace a /
+    NoEncontrada.tsx           404: logo, texto y botón según la sesión
+    rutas.ts                   zona + título + noindex en un solo lugar
+    useTituloPagina.ts         título del documento por ruta
+    MetaNoIndex.tsx            refuerza robots noindex por ruta
+    sesionVisible.ts           sesión actual sin providers (para la 404)
     CargandoRuta.tsx
     DevRoute.tsx
     PantallaEnConstruccion.tsx
@@ -74,6 +159,10 @@ src/
     zonas/BarberZone.tsx       login, instalar, app/*
     zonas/PublicZone.tsx       b, cita
     zonas/AdminZone.tsx        admin
+  features/pwa/
+    PwaProvider.tsx            registro del SW + avisos de versión y sin conexión
+    registroSw.ts              envoltorio de virtual:pwa-register
+    domain/actualizacion.ts    regla de 30 min + pruebas
   dev/DevPage.tsx              todos los componentes y estados
   features/auth/
     AuthProvider.tsx
@@ -83,7 +172,9 @@ src/
     sesionBarbero.ts           localStorage + lectura de tipo/exp
     antesDeCerrarSesion.ts     registro de tareas
     useAntesDeCerrarSesion.ts
-    adminAuthPlaceholder.ts    marcador con clave separada
+    sesionAdmin.ts             sesión del panel (clave separada)
+    AdminAuthProvider.tsx      login, logout y limpieza de ['admin']
+    ProtectedAdminRoute.tsx    guard de /admin/*
     types.ts                   tipos tomados de AUTH.md / ADMIN.md
   features/reserva-publica/
     CodigoPage.tsx             /b; solo normaliza el código
@@ -94,12 +185,64 @@ src/
     components/                días, slots, servicios y acompañantes
     domain/                    totales, celular, correo, días, formulario,
                                estados y errores + pruebas
+  features/agenda/
+    types.ts                   DTOs del panel (solicitudes, dashboard, atención)
+    api.ts                     dashboard, transiciones y propina
+    claves.ts                  claves de consulta ['barbero', ...]
+    hooks.ts                   useDashboardHoy y las seis mutaciones
+    HoyPage.tsx                /app/hoy
+    components/                sheets de atendido, cancelar y no asistió
+    domain/                    agenda, hoy, propina y errores + pruebas
+  features/solicitudes/
+    api.ts / hooks.ts          GET /barbero/solicitudes
+    SolicitudesPage.tsx        /app/solicitudes
+    components/                sheet de rechazo
+    domain/                    cuenta regresiva y etiqueta de fecha + pruebas
+  features/cuentas/
+    types.ts                   Balance (hoy e historial)
+    api.ts / claves.ts         GET balance/hoy y balance/historial
+    hooks.ts                   useBalanceHoy, useHistorialBalance
+    CuentasPage.tsx            /app/cuentas
+    components/GraficoNeto.tsx 30 barras sin librería
+    domain/                    barras, días, aria-label, filas y coherencia
+  features/compras/
+    types.ts                   Compra, ListaCompras, RespuestaCompra
+    api.ts / claves.ts         CRUD de compras
+    hooks.ts                   useCompras + crear/editar/eliminar
+    ComprasPage.tsx            /app/compras
+    components/                sheet de edición con confirmación
+    domain/                    validación y errores + pruebas
+  features/ajustes/
+    types.ts                   Configuracion, Servicio, Horario
+    api.ts / claves.ts         configuracion, servicios y horarios
+    hooks.ts                   useConfiguracion/Servicios/Horarios + mutaciones
+    AjustesPage.tsx            /app/ajustes
+    components/                link, servicios, horarios y sheets
+    domain/                    horas, servicios, horarios, errores y
+                               portapapeles + pruebas
+  features/notificaciones/
+    types.ts / api.ts          estados, llave VAPID y suscripciones
+    hooks.ts                   useNotificaciones (7 estados + activar/desactivar)
+    sincronizacion.ts          sync idempotente y baja al cerrar sesión
+    registro.ts                espera acotada al service worker
+    InstalarPage.tsx           /instalar (alias /app/instalar)
+    components/                pasos, activación y tarjeta de Ajustes
+    domain/                    vapid, plataforma, onboarding, urlDestino,
+                               suscripción y errores + pruebas
+  features/admin/
+    types.ts / api.ts          barberos y login del panel
+    claves.ts / hooks.ts       ['admin','barberos'] + mutaciones
+    AdminLoginPage.tsx         /admin/login
+    AdminListaPage.tsx         /admin
+    components/                sheets de alta y detalle, píldora, secretos
+    domain/                    password, formulario, texto, lista, estado,
+                               errores, enlaces y entrega + pruebas
   shared/api/
     client.ts                  petición, ErrorPeticion, 401/403
     almacenamientoSesion.ts    claves, leerToken, zonaPorRuta
   shared/lib/
-    format.ts / fechas.ts / pwa.ts / cn.ts + tests
-  shared/ui/                   kit de componentes + Sheet.test
+    format.ts / fechas.ts / montos.ts / pwa.ts / cn.ts / useAhora.ts + tests
+  shared/ui/                   kit + MoneyInput + EstadoError + Sheet.test
   styles/tokens.css            fuente única de valores visuales
   styles/globals.css           reset, tipografía, shell, animaciones
   sw.ts                        service worker
@@ -111,18 +254,17 @@ src/
 |---|---|---|
 | `/` | — | Redirige a `/app/hoy` o `/login`. |
 | `/login` | barbero | Real. |
-| `/instalar` | barbero | Marcador protegido. |
-| `/app/hoy` | barbero | Marcador + BottomNav. |
-| `/app/solicitudes` | barbero | Marcador + BottomNav. |
-| `/app/cuentas` | barbero | Marcador + BottomNav. |
-| `/app/compras` | barbero | Marcador + BottomNav. |
-| `/app/ajustes` | barbero | Marcador + BottomNav. |
+| `/instalar` | barbero | Real: pasos de instalación y activación de notificaciones (`/app/instalar` redirige aquí). |
+| `/app/hoy` | barbero | Real: contadores, agenda, próximas acciones y horarios libres. |
+| `/app/solicitudes` | barbero | Real: orden por urgencia, cuenta regresiva y aceptar/rechazar. |
+| `/app/cuentas` | barbero | Real: tarjeta financiera, gráfico de 30 días y lista de días. |
+| `/app/compras` | barbero | Real: formulario, lista de hoy y sheet de edición. |
+| `/app/ajustes` | barbero | Real: link, servicios, horarios y cerrar sesión. |
 | `/b` | público | Real; pide el código sin consultar la API. |
 | `/b/:codigo` | público | Real; disponibilidad y creación de cita. |
 | `/cita/:token` | público | Real; seguimiento con polling 30 s. |
-| `/admin/login` | admin | Marcador. |
-| `/admin` | admin | Marcador con AdminLayout. |
-| `/admin/barberos/:id` | admin | Marcador con AdminLayout. |
+| `/admin/login` | admin | Real: login del panel. |
+| `/admin` | admin | Real: lista, alta y detalle en sheets. |
 | `/dev` | desarrollo | Kit visual; en producción muestra 404. |
 
 Las zonas se cargan con `React.lazy`: público, barbero y admin van en chunks
@@ -178,8 +320,8 @@ separados. `/app/*` exige sesión de barbero.
 - Al cerrar sesión se ejecutan las tareas registradas con
   `registrarAntesDeCerrarSesion` (tolerantes a fallos). El prompt de push
   registrará allí la baja de la suscripción.
-- El admin tiene un marcador (`adminAuthPlaceholder.ts`) con clave
-  `klippflow.admin.sesion`; su AuthProvider real queda para el prompt de admin.
+- El admin tiene su propio provider (`AdminAuthProvider`), clave
+  `klippflow.admin.sesion` y un guard que exige el tipo `admin` del JWT.
 
 ## 8. Cliente HTTP
 
@@ -215,14 +357,16 @@ separados. `/app/*` exige sesión de barbero.
   pero la ruta real del mapa es `/app/solicitudes`. El service worker normaliza
   exactamente `/solicitudes` → `/app/solicitudes`. Las demás URLs internas se
   respetan.
-- **Campos del payload push:** los documentos describen título, cuerpo y `url`
-  interna, pero no muestran el JSON completo. El service worker lee las claves
-  de nivel superior `title`, `body` y `url` y no asume ningún otro dato. Si el
-  backend las envuelve en `data`, habrá que ajustar el contrato.
-- **Onboarding iPhone:** el flujo de `DISENO.md` 6.1 enviaría a `/instalar` en
-  iPhone no instalado. Este prompt pide explícitamente que tras entrar se vaya a
-  `/app/hoy`; `esIphoneNoInstalada()` quedó listo y probado para el prompt de
-  onboarding.
+- **Campos del payload push (Prompt 6):** el payload real es
+  `{ titulo, cuerpo, url }` (claves planas en español; verificado en el código del
+  backend, `PushPayload`). El service worker lee esas claves y admite
+  `title`/`body` como respaldo. `url` viene como `/solicitudes` y se traduce a
+  `/app/solicitudes`.
+- **Onboarding iPhone (Prompt 6):** implementado. Tras el login,
+  `decidirOnboarding()` manda a `/instalar` en iPhone sin instalar (pasos
+  completos) o cuando hay que activar notificaciones; si el permiso ya está
+  concedido/denegado o se pulsó "Hacerlo después" hace menos de 24 h, va a
+  `/app/hoy`.
 - **`nombreBarberia`:** es opcional al crear un barbero en `ADMIN.md`; el login
   del frontend acepta `null` sin inventar el campo.
 - **Horizonte público:** `hoy` a `hoy + 7` inclusive son 8 fechas. El selector
@@ -240,6 +384,187 @@ separados. `/app/*` exige sesión de barbero.
   estado. La franja de `/b/:codigo` usa la cita guardada más reciente de ese
   código; el estado real se consulta en `/cita/:token`.
 
+### Decisiones del Prompt 3 (Hoy y Solicitudes)
+
+- **Contador "Libres" → "Atendidos":** `GET /barbero/dashboard/hoy` no expone
+  ningún contador de horarios libres; `huecosLibres` es un arreglo de rangos.
+  `DISENO.md` 6.3 pedía "Libres". Decisión del dueño (2026-10-30): quitar ese
+  contador y mostrar **Atendidos** (`resumen.atendidas`). Los tres contadores
+  quedan: Por atender (`resumen.aceptadas`), Atendidos (`resumen.atendidas`) y
+  Solicitudes (`resumen.solicitudesPendientes`).
+- **DTO de la cita del dashboard:** el documento dice literalmente
+  `"...": "resto del DTO de cita"`. Se usa el DTO documentado en la sección de
+  solicitudes más `puedeMarcarNoAsistio` y `atencion`; los campos que solo
+  existen en un contexto quedan opcionales en `CitaBarbero` y la UI tolera que
+  falten.
+- **Acompañantes sin edad:** `DISENO.md` 6.3 ejemplifica "Hijo (8 años)". El
+  contrato solo trae `personas[].nombre` (opcional al crear) y sus servicios, así
+  que no se muestra ninguna edad ni se inventa el dato.
+- **Ventana de corrección de propina:** se valida contra
+  `atenciones.fecha_balance`, no contra `citas.fecha`. El dashboard solo lista
+  citas de hoy, así que la corrección se ofrece siempre desde la línea
+  "Atendido" y, si el backend responde 409, se muestra su mensaje sin cambiar
+  nada.
+- **409 de expiración:** el mensaje de la API
+  (`Esta solicitud expiró (pasaron más de 2 horas)`) se normaliza a
+  "Esta solicitud ya expiró" al aceptar o rechazar, como pide `DISENO.md` 6.6.
+  Los demás 409 (cruce, ya respondida) usan el texto de la API.
+- **"Avisar" del toast:** `whatsappUrl` solo llega en aceptar, rechazar y
+  cancelar. `no-asistio` no lo devuelve según el backend, así que ese toast no
+  muestra el botón. El botón es un `<a target="_blank">` real dentro del toast.
+- **Toast de acción:** 8 s para que el botón "Avisar" sea alcanzable.
+- **Invalidación:** todas las claves del panel cuelgan de `['barbero']`. Una sola
+  invalidación cubre dashboard, solicitudes y la clave reservada
+  `['barbero','balance','hoy']` para Cuentas.
+- **`onCerrar` estable en los sheets:** se envuelve en `useCallback` para que un
+  refetch de 60 s no vuelva a ejecutar el efecto del `Sheet` y robe el foco del
+  campo de propina.
+- **`main.tsx` sin cambios:** el puente del service worker ya invalidaba todas
+  las consultas montadas al recibir `{ tipo: 'klippflow:refrescar' }`, lo que
+  incluye dashboard y solicitudes.
+
+### Decisiones del Prompt 4 (Cuentas y Compras)
+
+- **Claves con el día:** `clavesBalance.hoy(fecha)`,
+  `clavesBalance.historial(fecha)` y `clavesCompras.lista(fecha)` incluyen el día
+  de Bogotá (`fechaConsulta`). Al pasar la medianoche la clave cambia y la
+  consulta se refresca sola; `useAhora(60_000)` es el reloj que detecta el
+  cambio sin sondeos agresivos.
+- **La clave reservada del Prompt 3 se movió:** `['barbero','balance','hoy']`
+  dejó de estar en `features/agenda/claves.ts` y ahora vive en
+  `features/cuentas/claves.ts` con la fecha. Sigue colgando de `['barbero']`, así
+  que la invalidación de Atendido y propina la cubre sin cambios.
+- **`MoneyInput` compartido:** el campo de monto con puntos de miles estaba
+  dentro del sheet de propina. Se extrajo a `src/shared/ui/MoneyInput.tsx` y las
+  reglas de texto a `src/shared/lib/montos.ts`. La propina conserva su
+  comportamiento (7 dígitos, rango 1–1.000.000) y Compras usa 8 dígitos
+  (1–50.000.000). `formatearMilesEntrada` y `parsearMiles` siguen exportándose
+  desde `features/agenda/domain/propina.ts` para no tocar importaciones.
+- **La pantalla no recalcula la ganancia:** siempre muestra `gananciaNeta` de la
+  API. `esBalanceCoherente()` solo verifica en pruebas la fórmula
+  `servicios + propinas − compras`.
+- **Anticipos y devoluciones:** llegan en la respuesta y siempre valen 0 en la
+  Fase 1; no se muestran.
+- **Compras y balance:** `POST` y `PATCH` devuelven `{ compra, balance }`; se usa
+  el `balance` para `setQueryData` de hoy y además se invalidan compras, balance
+  e historial. `DELETE` responde 204, así que solo invalida.
+- **Descripción sin `maxLength`:** se permite escribir de más para poder explicar
+  el límite de 150; el formulario queda inválido y muestra el motivo.
+- **Mensaje del 409 de compras:** el prompt pide "Esta compra ya no se puede
+  modificar"; el backend responde "Solo puedes modificar una compra el mismo día
+  en que se registró". Se usa el texto del prompt y se reporta la diferencia.
+
+### Decisiones del Prompt 5 (Ajustes)
+
+- **Interruptor de día sin campos nuevos:** el backend no tiene "día activo";
+  se deriva de los bloques. Día activado = al menos un bloque con
+  `activo: true`. Apagar = `PATCH { activo: false }` a cada bloque activo
+  (conserva las horas). Encender sin bloques = `POST` 09:00–13:00. Ver
+  `docs/AJUSTES.md` §3.
+- **Guardado explícito por día:** `planificarGuardado()` (pura y con pruebas)
+  traduce el borrador a `DELETE`/`PATCH`/`POST` y se ejecutan en orden. El primer
+  error se muestra en la fila y no se pierde lo escrito.
+- **Horas:** la columna TIME puede llegar como `HH:mm:ss`; se normaliza a
+  `HH:mm` con `normalizarHora`. El selector nativo (`input type="time" step=900`)
+  devuelve 24 h y debajo se muestra el rango en 12 h.
+- **Servicios, sin máximos inventados:** el backend solo documenta
+  `precio >= 1`; no se valida un tope superior. `descripcion` vacía se envía como
+  `''` al editar para poder borrarla y se omite al crear.
+- **Duraciones:** `textoDuracion` usa `1 h 15 min` / `45 min` (lo pide este
+  prompt) en lugar del `90 min` de `DISENO.md` §4 para servicios.
+- **Link público:** se muestra `linkReservas` completo; `codigoUnico` no se
+  muestra, solo alimenta el `href` de "Ver como cliente".
+- **Cerrar sesión:** `cerrarSesion()` + `queryClient.clear()` +
+  `navigate('/login')`, para que no quede nada del barbero anterior.
+- **Invalidación:** servicios invalida solo `['barbero','servicios','todos']`;
+  guardar un día invalida `['barbero','horarios']` y `['barbero','dashboard','hoy']`
+  (bloques y huecos de Hoy dependen de los horarios).
+
+### Decisiones del Prompt 6 (onboarding y push)
+
+- **Payload real, sin suposiciones:** el backend envía
+  `{ titulo, cuerpo, url }`; el service worker lee esas claves (con `title`/`body`
+  como respaldo) y usa "Nueva solicitud de cita" / "Tienes una nueva solicitud de
+  cita." si faltan.
+- **`url` heredada:** el backend manda `/solicitudes`, la app usa
+  `/app/solicitudes`. `urlDestinoSegura()` traduce esa ruta, exige mismo origen y
+  cae a `/app/solicitudes` con cualquier URL externa o esquema raro.
+- **Ruta del onboarding:** la canónica es `/instalar` (DISENO.md 6.2 y mapa de
+  rutas); se añadió el alias `/app/instalar` que redirige, porque el prompt la
+  nombra así.
+- **Permiso solo con toque:** `activar()` se ata a un clic y pide el permiso como
+  primera operación asíncrona; nunca se pide al montar ni al iniciar sesión.
+- **Interruptor del día del onboarding:** `decidirOnboarding()` no se ofrece si el
+  permiso es `granted`/`denied` ni dentro de las 24 h posteriores a "Hacerlo
+  después" (`localStorage`, clave `klippflow.onboarding.instalacion`).
+- **Cierre de sesión suave:** al salir se hace `DELETE` de la suscripción en el
+  backend pero **no** `unsubscribe()` en el navegador; así el siguiente barbero
+  recupera el `endpoint` (el backend lo reasigna) sin volver a activar.
+- **`pushsubscriptionchange` no se implementa:** el service worker no tiene JWT y
+  el backend no lo documenta; la re-sincronización ocurre al abrir la app.
+- **Service worker en desarrollo:** `devOptions` activado con `type: 'module'` y el
+  precache guardado tras un `if` sobre `self.__WB_MANIFEST` (en dev llega vacío y
+  `createHandlerBoundToURL('index.html')` lanzaría). Producción sigue emitiendo
+  `dist/sw.js` clásico.
+- **"Enviar prueba" no se implementó:** `POST /barbero/push/probar` existe pero
+  queda fuera de este prompt.
+
+### Decisiones del Prompt 7 (panel de administración)
+
+- **Sesión separada de verdad:** `AdminAuthProvider` propio con
+  `klippflow.admin.sesion`, validación de `tipo === 'admin'` y `exp`, y
+  `ProtectedAdminRoute`. Al quedar sin sesión se borran **solo** las consultas
+  `['admin', …]`.
+- **Lista sin paginar:** se piden 50 (máximo del backend) porque los conteos de
+  los chips y la búsqueda por nombre y apellidos no los cubre la API; se avisa
+  cuando hay más de 50.
+- **Orden por nombre:** el backend devuelve por creación descendente; la lista se
+  reordena alfabéticamente (insensible a acentos) como pide el prompt.
+- **La contraseña la escribe el panel:** el backend no la genera ni la devuelve,
+  así que se propone una de 12 caracteres con `crypto.getRandomValues` (sin
+  0/O/1/l/I y con mayúscula, minúscula y dígito).
+- **Secretos solo en memoria:** los sheets se montan al abrir y se desmontan al
+  cerrar, así que la contraseña y el código nuevo desaparecen solos. Nunca van a
+  la caché de TanStack Query, a `localStorage` ni a la URL.
+- **`correo` obligatorio:** `DISENO.md` §6.12 lo daba por opcional, pero
+  `ADMIN.md` lo exige (columna NOT NULL). Se marca obligatorio en el formulario.
+- **`nombres` y `apellidos` van separados:** el backend los pide por separado; el
+  formulario tiene los dos campos (el prompt hablaba de "Nombre").
+- **Estado sin leer la respuesta:** `PATCH .../estado` no documenta el cuerpo de
+  respuesta, así que la UI aplica el estado elegido e invalida la lista.
+- **Detalle en sheet:** el prompt define el detalle como sheet; la ruta
+  `/admin/barberos/:id` del marcador del prompt 1 ya no existe.
+- **`noindex`:** `index.html` ya lo trae para toda la app y `MetaNoIndex` lo
+  garantiza en las rutas `/admin`.
+
+### Decisiones del Prompt 8 (pulido de PWA)
+
+- **Un solo lugar para la estructura de rutas:** `src/app/rutas.ts` decide zona,
+  título y `noindex`. `ZoneRouter` (antes tenía su propia copia de
+  `zonaDeRuta`), `useTituloPagina` y `MetaNoIndex` leen de ahí.
+- **Actualización con `registerType: 'prompt'`:** el service worker nuevo queda
+  en espera y se quitó el `skipWaiting()` del `install`; solo se activa al
+  pulsar "Actualizar" (banda persistente, no toast, para que no se pierda
+  mientras el usuario trabaja).
+- **Comprobación de versión cada 30 min:** al volver a la app se llama a
+  `registration.update()` como mucho cada media hora (regla pura con pruebas);
+  el navegador ya revisa al navegar.
+- **El logo siempre en baldosa hueso:** el logo real es casi negro y sobre
+  `--bg` desaparecía; la baldosa usa `--accent` y el archivo de 512 px (con `lg`
+  = 104 px sobra incluso a 3×, por eso no se usa el de 1024).
+- **`alt` según contexto:** decorativo (`alt=""`) cuando el nombre "KlippFlow"
+  ya está al lado; informativo en la 404 y el fallback de error.
+- **404 sin revelar `/admin`:** la sesión se lee de `localStorage` validando
+  `tipo` y `exp` (`sesionVisible`), porque la 404 también se muestra fuera de
+  las zonas donde no hay providers. Sin sesión no aparece ningún enlace a
+  `/admin`; se ofrece "Escribir mi código" (`/b`), que es público.
+- **Título en el layout, no en cada página:** `AppLayout` y `AdminLayout` ponen
+  el título de todas sus rutas hijas (incluida la 404 interna, que el mapeo
+  resuelve por ruta); así no hay dos hooks peleándose por `document.title`.
+- **`X-Robots-Tag` además de `robots.txt`:** es la cabecera que "permite la
+  herramienta" (Vercel) para el mismo `noindex`.
+- **Sin CSP:** no se añade hasta que se pida (regla del prompt).
+
 ## 10. Verificación
 
 Comandos obligatorios:
@@ -255,17 +580,28 @@ pnpm dev      # http://localhost:3001
 
 Comprobado en este prompt:
 
-- 17 archivos de prueba, 118 pruebas, todas en verde con TZ por defecto, UTC y
+- 47 archivos de prueba, 420 pruebas, todas en verde con TZ por defecto, UTC y
   Asia/Tokyo.
 - TypeScript y ESLint sin errores.
-- Build de producción correcto.
-- `/b`, `/b/:codigo`, `/cita/:token`, 404 de barbero y 404 de cita verificados en
-  Chrome headless a 360 y 390 px sin scroll horizontal.
-- Disponibilidad con estados verde/ámbar/rojo, selección de hora, acompañantes,
-  totales, validaciones, creación, franja de cita activa y polling de 30 s
-  verificados contra un backend simulado.
-- Todos los estados del seguimiento renderizados; el enlace se recorta y el
-  botón de copiar muestra confirmación o error.
+- Build de producción correcto: `dist/` con `index.html`,
+  `manifest.webmanifest`, `robots.txt`, `sw.js` (~21 KB) e `icons/`.
+- El service worker generado conserva `push`, `notificationclick`,
+  `showNotification` y el mensaje `klippflow:refrescar`, precachea
+  `index.html` (48 entradas) y solo hace `skipWaiting` al recibir
+  `SKIP_WAITING`.
+- Manifest comprobado en `dist`: `start_url: /app`, `scope: /`,
+  `display: standalone`, `lang: es-CO`, íconos 192 y 512 `any` más el
+  `maskable` en una entrada aparte.
+- Sin hex fuera de `tokens.css` (solo el theme-color del manifest y de
+  `index.html`, con el comentario que indica su token de origen).
+- Pruebas nuevas: mapeo ruta → título, zona, títulos de la 404 y `noindex`
+  (`src/app/rutas.test.ts`) y la regla de comprobación de versión cada 30
+  minutos (`src/features/pwa/domain/actualizacion.test.ts`).
+- Ajustes visuales del mismo día: contadores de Hoy, horas en 12 h y sin "Ver
+  como cliente" en Ajustes.
+- Lo visual (Lighthouse, instalación, iPhone real y el flujo de actualización
+  del service worker) es manual: ver `docs/PWA.md` §6. Nada de eso queda
+  marcado como verificado aquí.
 
 Nota de herramienta: el build emite una advertencia de Vite 8 proveniente de
 `vite-plugin-pwa` (`inlineDynamicImports` deprecado). No es un error de
@@ -274,11 +610,11 @@ versión compatible con la nueva API de Rollup.
 
 ## 11. Siguiente prompt
 
-Implementar las pantallas del barbero sobre la base actual:
+Queda la puesta en producción:
 
-- Hoy y Solicitudes con hooks de TanStack Query, polling de 60 s y refresco por
-  push.
-- Cuentas, Compras y Ajustes.
-- Suscripción push usando `registrarAntesDeCerrarSesion`.
-- Onboarding `/instalar`.
-- Panel admin con su AuthProvider real.
+- Despliegue del backend (variables `APP_PUBLIC_URL` y CORS del dominio real) y
+  del frontend en Vercel siguiendo `docs/DESPLIEGUE_FRONTEND.md`.
+- Prueba en iPhone real con la app ya en HTTPS: `docs/PWA.md` §6.
+- Lighthouse sobre el preview y corrección de lo que quede por debajo de 90.
+- "Enviar prueba" de notificaciones (`POST /barbero/push/probar`) si se pide.
+

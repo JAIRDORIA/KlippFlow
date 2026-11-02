@@ -1,7 +1,10 @@
 import { lazy, Suspense } from 'react'
 import { useLocation } from 'react-router-dom'
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 import { Spinner } from '@/shared/ui/Spinner'
+import { MetaNoIndex } from './MetaNoIndex'
 import { NoEncontrada } from './NoEncontrada'
+import { zonaDeRuta } from './rutas'
 
 const BarberZone = lazy(() => import('./zonas/BarberZone'))
 const PublicZone = lazy(() => import('./zonas/PublicZone'))
@@ -15,38 +18,28 @@ function CargandoPantalla() {
   )
 }
 
-function zonaDeRuta(pathname: string): 'barbero' | 'publico' | 'admin' | 'desconocida' {
-  if (
-    pathname === '/login' ||
-    pathname === '/instalar' ||
-    pathname === '/app' ||
-    pathname.startsWith('/app/')
-  ) {
-    return 'barbero'
-  }
-  if (
-    pathname === '/b' ||
-    pathname.startsWith('/b/') ||
-    pathname.startsWith('/cita/')
-  ) {
-    return 'publico'
-  }
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin'
-  return 'desconocida'
-}
-
 export function ZoneRouter() {
   const { pathname } = useLocation()
-  const normalizada = pathname.replace(/\/+$/, '') || '/'
-  const zona = zonaDeRuta(normalizada)
-
-  if (zona === 'desconocida') return <NoEncontrada />
+  const zona = zonaDeRuta(pathname)
 
   return (
-    <Suspense fallback={<CargandoPantalla />}>
-      {zona === 'barbero' && <BarberZone />}
-      {zona === 'publico' && <PublicZone />}
-      {zona === 'admin' && <AdminZone />}
-    </Suspense>
+    <>
+      {/* Un solo lugar decide el noindex de cada ruta (ver rutas.ts). */}
+      <MetaNoIndex />
+
+      {zona === 'desconocida' ? (
+        <NoEncontrada />
+      ) : (
+        // Frontera por zona: si una pantalla falla, el resto de la app sigue
+        // viva y al cambiar de zona la frontera se reinicia.
+        <ErrorBoundary key={zona}>
+          <Suspense fallback={<CargandoPantalla />}>
+            {zona === 'barbero' && <BarberZone />}
+            {zona === 'publico' && <PublicZone />}
+            {zona === 'admin' && <AdminZone />}
+          </Suspense>
+        </ErrorBoundary>
+      )}
+    </>
   )
 }

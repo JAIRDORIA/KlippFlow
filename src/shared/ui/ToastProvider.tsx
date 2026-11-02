@@ -37,18 +37,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             className="kf-toast pointer-events-auto flex items-center gap-3 rounded-[var(--radius-toast)] border border-line bg-elevated px-[var(--space-toast-left)] py-[var(--space-toast-vertical)] shadow-[var(--shadow-toast)]"
           >
             <p className="type-small flex-1 text-text">{toast.mensaje}</p>
-            {toast.accion && (
-              <button
-                type="button"
-                onClick={() => {
-                  toast.accion?.onClick()
-                  cerrar()
-                }}
-                className="type-small h-[var(--height-button-toast)] shrink-0 rounded-[var(--radius-button-toast)] bg-accent px-3 font-medium text-ink"
-              >
-                {toast.accion.etiqueta}
-              </button>
-            )}
+            {toast.accion &&
+              (toast.accion.href ? (
+                <a
+                  href={toast.accion.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={cerrar}
+                  className="type-small inline-flex h-[var(--height-button-toast)] shrink-0 items-center justify-center rounded-[var(--radius-button-toast)] bg-accent px-3 font-medium text-ink"
+                >
+                  {toast.accion.etiqueta}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.accion?.onClick?.()
+                    cerrar()
+                  }}
+                  className="type-small h-[var(--height-button-toast)] shrink-0 rounded-[var(--radius-button-toast)] bg-accent px-3 font-medium text-ink"
+                >
+                  {toast.accion.etiqueta}
+                </button>
+              ))}
             <button
               type="button"
               aria-label="Cerrar aviso"

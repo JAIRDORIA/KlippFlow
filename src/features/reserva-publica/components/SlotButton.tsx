@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/cn'
+import { hora12 } from '@/shared/lib/fechas'
 import type { SlotDisponibilidad } from '../types'
 import { esSlotSeleccionable, etiquetaEstadoSlot } from '../domain/horarios'
 
@@ -26,7 +27,7 @@ export function SlotButton({ slot, seleccionado, onSeleccionar }: SlotButtonProp
       type="button"
       aria-pressed={seleccionado}
       aria-disabled={!libre || undefined}
-      aria-label={`${slot.horaInicio}, ${etiqueta}`}
+      aria-label={`${hora12(slot.horaInicio)}, ${etiqueta}`}
       onClick={() => {
         if (!libre) return
         onSeleccionar(seleccionado ? null : slot.horaInicio)
@@ -37,7 +38,7 @@ export function SlotButton({ slot, seleccionado, onSeleccionar }: SlotButtonProp
         !libre && 'cursor-not-allowed',
       )}
     >
-      {slot.horaInicio}
+      {hora12(slot.horaInicio)}
     </button>
   )
 }

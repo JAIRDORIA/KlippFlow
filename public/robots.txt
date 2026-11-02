@@ -1,0 +1,4 @@
+# KlippFlow no se indexa: ni el panel, ni la agenda, ni las reservas de cada
+# barbero. La copia en producción también envía X-Robots-Tag (ver vercel.json).
+User-agent: *
+Disallow: /

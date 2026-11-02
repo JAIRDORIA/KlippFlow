@@ -124,13 +124,13 @@ describe('saludo', () => {
 })
 
 describe('hora12', () => {
-  it('convierte 24 h a 12 h con a. m. y p. m.', () => {
-    expect(hora12('09:00')).toBe('09:00 a. m.')
-    expect(hora12('00:00')).toBe('12:00 a. m.')
-    expect(hora12('11:59')).toBe('11:59 a. m.')
-    expect(hora12('12:00')).toBe('12:00 p. m.')
-    expect(hora12('13:05')).toBe('01:05 p. m.')
-    expect(hora12('23:45')).toBe('11:45 p. m.')
+  it('convierte 24 h a 12 h con am y pm', () => {
+    expect(hora12('09:00')).toBe('9:00 am')
+    expect(hora12('00:00')).toBe('12:00 am')
+    expect(hora12('11:59')).toBe('11:59 am')
+    expect(hora12('12:00')).toBe('12:00 pm')
+    expect(hora12('13:05')).toBe('1:05 pm')
+    expect(hora12('23:45')).toBe('11:45 pm')
   })
 
   it('devuelve vacío para horas inválidas', () => {

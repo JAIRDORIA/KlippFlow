@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
 import { ErrorPeticion } from '@/shared/api/client'
 import {
   crearCita,
@@ -6,7 +7,13 @@ import {
   obtenerDisponibilidad,
   obtenerSeguimiento,
 } from './api'
-import type { CrearCitaBody } from './types'
+import {
+  obtenerCitaActivaDeCodigo,
+  olvidarCitaGuardada,
+} from './almacenamientoCitas'
+import { debeMostrarAvisoCita, debeOlvidarCita } from './domain/avisoCita'
+import { esError404 } from './domain/errores'
+import type { CitaGuardada, CrearCitaBody } from './types'
 
 function reintentar(intentos: number, error: unknown): boolean {
   if (error instanceof ErrorPeticion && error.status >= 400 && error.status < 500) {
@@ -79,4 +86,36 @@ export function useSeguimiento(token: string) {
     },
     refetchIntervalInBackground: false,
   })
+}
+
+/**
+ * Cita guardada de este barbero que **sigue viva**, validada contra el servidor.
+ *
+ * El aviso "Tienes una cita pendiente" no puede salir solo de `localStorage`:
+ * una cita atendida, cancelada, rechazada o expirada se quedaría para siempre.
+ * Se consulta el seguimiento y:
+ * - se muestra solo con `pendiente` o `aceptada` de hoy en adelante,
+ * - se olvida la cita guardada cuando el estado es final (o el token ya no
+ *   existe, 404).
+ *
+ * Mientras el seguimiento no responde no se muestra: así, al abrir el link, no
+ * aparece pegado un aviso viejo.
+ */
+export function useCitaActiva(codigo: string, hoy: string): CitaGuardada | null {
+  const guardada = useMemo(() => obtenerCitaActivaDeCodigo(codigo), [codigo])
+  const seguimiento = useSeguimiento(guardada?.token ?? '')
+
+  const datos = seguimiento.data
+    ? { estado: seguimiento.data.estado, fecha: seguimiento.data.fecha }
+    : null
+
+  const mostrar = debeMostrarAvisoCita(datos, hoy)
+  const olvidar = debeOlvidarCita(datos, hoy) || esError404(seguimiento.error)
+
+  useEffect(() => {
+    if (!guardada || !olvidar) return
+    olvidarCitaGuardada(guardada.token)
+  }, [guardada, olvidar])
+
+  return mostrar ? guardada : null
 }

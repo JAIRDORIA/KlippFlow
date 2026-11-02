@@ -9,7 +9,7 @@ import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Field } from '@/shared/ui/Field'
 import { Input } from '@/shared/ui/Input'
-import { LogoKlippFlow } from '@/shared/ui/LogoKlippFlow'
+import { Logo } from '@/shared/ui/Logo'
 import { Money } from '@/shared/ui/Money'
 import { ScreenHeader } from '@/shared/ui/ScreenHeader'
 import { Segmented } from '@/shared/ui/Segmented'
@@ -57,10 +57,10 @@ export default function DevPage() {
 
       <Seccion titulo="MARCA">
         <div className="flex items-center gap-6">
-          <LogoKlippFlow tamano={96} />
+          <Logo tamano="lg" decorativo />
           <div>
             <p className="type-brand">KlippFlow</p>
-            <p className="type-helper mt-2">Logo provisional, reemplazable.</p>
+            <p className="type-helper mt-2">Logo real sobre baldosa hueso.</p>
           </div>
         </div>
       </Seccion>

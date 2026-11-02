@@ -6,6 +6,7 @@ import {
   leerCitasGuardadas,
   obtenerCitaActivaDeCodigo,
   obtenerCitaGuardadaPorToken,
+  olvidarCitaGuardada,
 } from './almacenamientoCitas'
 
 function cita(
@@ -84,5 +85,37 @@ describe('almacenamiento de citas del cliente', () => {
 
     expect(() => guardarCitaCliente(cita(1))).not.toThrow()
     expect(leerCitasGuardadas()).toEqual([])
+  })
+})
+
+describe('olvidarCitaGuardada', () => {
+  it('borra solo la cita indicada', () => {
+    guardarCitaCliente(cita(1))
+    guardarCitaCliente(cita(2))
+
+    olvidarCitaGuardada(cita(1).token)
+
+    const restantes = leerCitasGuardadas()
+    expect(restantes).toHaveLength(1)
+    expect(restantes[0]?.token).toBe(cita(2).token)
+  })
+
+  it('no toca nada si el token no está', () => {
+    guardarCitaCliente(cita(3))
+    olvidarCitaGuardada('token-inexistente')
+    expect(leerCitasGuardadas()).toHaveLength(1)
+  })
+
+  it('deja la lista vacía al borrar la última', () => {
+    guardarCitaCliente(cita(4))
+    olvidarCitaGuardada(cita(4).token)
+    expect(leerCitasGuardadas()).toEqual([])
+  })
+
+  it('no lanza si localStorage está bloqueado', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('bloqueado')
+    })
+    expect(() => olvidarCitaGuardada('token')).not.toThrow()
   })
 })

@@ -2,11 +2,37 @@ import { useMutation } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  almacenDelNavegador,
+  decidirOnboarding,
+  leerDescarte,
+} from '@/features/notificaciones/domain/onboarding'
+import {
+  detectarDispositivo,
+  leerEntornoDispositivo,
+  leerPermiso,
+} from '@/features/notificaciones/domain/plataforma'
 import { ErrorPeticion } from '@/shared/api/client'
+import { useTituloPagina } from '@/app/useTituloPagina'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
-import { LogoKlippFlow } from '@/shared/ui/LogoKlippFlow'
+import { Logo } from '@/shared/ui/Logo'
 import { useAuth } from './useAuth'
+
+/** Tras entrar: onboarding de instalación/notificaciones o directo a Hoy. */
+function destinoTrasEntrar(): string {
+  const deteccion = detectarDispositivo(leerEntornoDispositivo())
+  const decision = decidirOnboarding({
+    plataforma: deteccion.plataforma,
+    standalone: deteccion.standalone,
+    permiso: leerPermiso(),
+    descartadoEn: leerDescarte(almacenDelNavegador()),
+    ahora: new Date(),
+  })
+
+  return decision === 'nada' ? '/app/hoy' : '/instalar'
+}
+
 
 function mensajeDeError(error: unknown): string {
   if (error instanceof ErrorPeticion) {
@@ -37,6 +63,7 @@ function avisoPorMotivo(motivo: string | null): string | null {
 export function LoginPage() {
   const { estaAutenticado, login } = useAuth()
   const navegar = useNavigate()
+  useTituloPagina()
   const [parametros] = useSearchParams()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -48,7 +75,7 @@ export function LoginPage() {
 
   const mutacion = useMutation({
     mutationFn: login,
-    onSuccess: () => navegar('/app/hoy', { replace: true }),
+    onSuccess: () => navegar(destinoTrasEntrar(), { replace: true }),
     onError: (fallo) => setError(mensajeDeError(fallo)),
   })
 
@@ -71,7 +98,7 @@ export function LoginPage() {
             aria-hidden="true"
             className="absolute size-[260px] rounded-full bg-white-5 blur-2xl"
           />
-          <LogoKlippFlow />
+          <Logo tamano="lg" decorativo />
         </div>
         <h1 className="type-brand">KlippFlow</h1>
         <p className="type-form mt-4 max-w-[300px] text-secondary">

@@ -1,11 +1,13 @@
 import { ArrowRight } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTituloPagina } from '@/app/useTituloPagina'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
-import { LogoKlippFlow } from '@/shared/ui/LogoKlippFlow'
+import { Logo } from '@/shared/ui/Logo'
 
 export function CodigoPage() {
+  useTituloPagina()
   const navegar = useNavigate()
   const [codigo, setCodigo] = useState('')
   const normalizado = codigo.replace(/\s+/g, '').toUpperCase()
@@ -19,7 +21,7 @@ export function CodigoPage() {
   return (
     <main className="screen flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
       <div className="mx-auto flex w-full max-w-[420px] flex-col">
-        <LogoKlippFlow tamano={44} />
+        <Logo tamano="sm" />
 
         <h1 className="type-public-title mt-8">Reserva tu cita</h1>
         <p className="type-form mt-4 text-secondary">
