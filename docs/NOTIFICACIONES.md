@@ -91,13 +91,28 @@ otro esquema, cae en `/app/solicitudes`.
 ## 3. Service worker
 
 - Escrito a mano en `src/sw.ts`, con `vite-plugin-pwa` en modo `injectManifest`.
-- Precache de la app + `NavigationRoute` a `index.html` + `skipWaiting()` en
-  `install` y `clients.claim()` en `activate` (con `registerType: 'autoUpdate'`).
+- Precache de la app + `NavigationRoute` a `index.html` + `clients.claim()` en
+  `activate`. El SW nuevo **espera** (`registerType: 'prompt'`) y se activa con
+  el mensaje `SKIP_WAITING` que envía el botón "Actualizar"; no se recarga solo.
 - **`push`**: muestra la notificación con `titulo` y `cuerpo` del payload (con
-  respaldo `title`/`body` si alguien envía el formato estándar), el ícono
-  `/icons/icon-192.png` y `data.url` ya normalizada. Después avisa a las ventanas
-  abiertas (`{ tipo: 'klippflow:refrescar' }`) para que la lista de Solicitudes
+  respaldo `title`/`body` si alguien envía el formato estándar), `icon`
+  `/icons/icon-192.png`, `badge` `/icons/badge-96.png` y `data.url` ya
+  normalizada. Después avisa a las ventanas abiertas
+  (`{ tipo: 'klippflow:refrescar' }`) para que la lista de Solicitudes
   se refresque sola.
+
+### Badge de la notificación
+
+- `badge` es el ícono pequeño de la barra de estado. Android lo usa como
+  **máscara de alfa**: pinta de blanco lo opaco y descarta el color. Por eso
+  `public/icons/badge-96.png` es **blanco puro con el fondo transparente**.
+- Si se usa un PNG a color con fondo opaco (como el antiguo `icon-192.png`), se
+  ve como un **cuadrado blanco**.
+- Se genera con `pnpm badge` desde `public/icons/logo-512.png` (ver
+  `scripts/README.md`). Es monocromático, 96×96 y con ~10 % de margen.
+- **iOS ignora `badge`**: usa el ícono grande de la notificación y, en la
+  pantalla de inicio, `apple-touch-icon.png`.
+- Ambas rutas son absolutas (`/icons/...`) y `badge-96.png` entra al precache.
 - **`notificationclick`**: cierra la notificación; si hay una ventana de la app,
   la enfoca y navega; si no, abre una nueva. Siempre en el mismo origen.
 - El precache y la navegación solo se registran si el manifiesto trae entradas:
@@ -234,6 +249,9 @@ Límites conocidos:
   soportado" y funciona sin notificaciones.
 - El permiso concedido en Safari **no** se hereda a la app instalada hasta que se
   pulsa "Activar notificaciones" dentro de la PWA instalada.
+- En iOS el `badge` no se pinta: la notificación usa el ícono grande y la
+  pantalla de inicio usa `apple-touch-icon.png`. En Android sí se ve la silueta
+  blanca de `badge-96.png`.
 
 ---
 
@@ -285,7 +303,7 @@ suscripción existente y vuelve a crear la fila.
 
 | # | Qué hacer | Qué debes ver |
 |---|---|---|
-| a | `pnpm lint`, `pnpm test` (también `TZ=UTC` y `TZ=Asia/Tokyo`), `pnpm build`. | 0 errores; 317 pruebas en verde; `dist/sw.js` existe. |
+| a | `pnpm lint`, `pnpm test` (también `TZ=UTC` y `TZ=Asia/Tokyo`), `pnpm build`. | 0 errores; 427 pruebas en verde; `dist/sw.js` existe. |
 | b | Chrome de escritorio en `localhost:3001`: login. | Onboarding reducido con "Activar notificaciones"; al aceptar aparece la fila en `push_subscriptions` con el barbero correcto y Ajustes muestra "Activas". |
 | c | Crear una cita pública en otra pestaña. | Llega la notificación del sistema "Nueva solicitud de cita" + "Nombre · …"; al hacer clic se abre/enfoca la app en `/app/solicitudes`. |
 | d | Con la app abierta y en primer plano, crear otra cita. | La notificación del sistema también aparece y la lista de Solicitudes se refresca sola. |
@@ -295,7 +313,8 @@ suscripción existente y vuelve a crear la fila.
 | h | Cerrar sesión y entrar con barbero2. | El `endpoint` queda con `usuario_id` de barbero2; barbero1 ya no tiene esa fila. |
 | i | Doble clic rápido en "Activar notificaciones". | Una sola petición a `/barbero/push/suscripciones` en Network. |
 | j | Simular un navegador sin soporte (DevTools o la prueba unitaria de `plataforma`). | Mensaje honesto y la app sigue funcionando. |
-| k | DevTools → Application → Service Workers; recargar tras un `pnpm build`. | El SW se actualiza (`skipWaiting` + `clients.claim`), sin quedarse con la versión vieja. |
+| k | DevTools → Application → Service Workers; recargar tras un `pnpm build`. | Aparece el banner "Hay una versión nueva"; al pulsar "Actualizar" el SW nuevo toma el control (`SKIP_WAITING` + `clients.claim`), sin quedarse con la versión vieja. |
 | l | Revisar a 390 px y navegar con teclado. | Sin scroll horizontal, objetivos ≥ 40 px, foco visible y lógico. |
 | m | Prueba en iPhone real. | Ver §8 (pendiente de despliegue). |
 | n | `git status` y búsqueda de `#hex` y de la llave privada VAPID. | Sin `.env`, `node_modules` ni `dist`; sin hex fuera de `tokens.css`; sin `VAPID_PRIVATE_KEY` en el repo. |
+| o | En Android, recibir la notificación con la app cerrada. | El ícono grande es el de KlippFlow y el badge de la barra de estado es una silueta blanca, no un cuadrado blanco. |

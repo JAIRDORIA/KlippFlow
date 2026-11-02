@@ -21,6 +21,7 @@ pantallas de borde (404, error, sin conexión) y metadatos.
 | `icon-512.png` | Ícono `any` del manifest (instalación) |
 | `icon-maskable-512.png` | Ícono `maskable` (el logo queda dentro de la zona segura) |
 | `apple-touch-icon.png` | `apple-touch-icon` de iOS (180×180) |
+| `badge-96.png` | Badge monocromático de las notificaciones push (blanco sobre alfa) |
 | `favicon.ico`, `favicon-32.png`, `favicon-48.png` | Pestaña del navegador |
 
 ### Componente compartido
@@ -28,8 +29,15 @@ pantallas de borde (404, error, sin conexión) y metadatos.
 `src/shared/ui/Logo.tsx` es el único logo de la app:
 
 - Tamaños `sm` (40 px), `md` (72 px) y `lg` (104 px).
-- Siempre dentro de una **baldosa redonda hueso** (`bg-accent`, padding interno
-  del 14 %): el logo real es casi negro y sobre el fondo `--bg` se perdería.
+- Siempre dentro de una **baldosa redonda hueso** (`bg-accent`): el logo real es
+  casi negro y sobre el fondo `--bg` se perdería.
+- El relleno interno es el 14 % del lado, **calculado en px**. Un padding
+  porcentual en CSS se resuelve contra el ancho del contenedor, no del logo: en
+  `/b/:codigo` dejaba la imagen en 0×0 y la baldosa se veía vacía.
+- `src="/icons/logo-512.png"` es absoluto desde la raíz, para que funcione en
+  `/b/X`, `/cita/X`, `/app/*` y `/admin/*`.
+- `width`/`height` explícitos (sin saltos de layout) y, si la imagen falla, un
+  monograma “K” sobre la misma baldosa (`onError`).
 - `decorativo` pone `alt=""` + `aria-hidden` cuando el nombre "KlippFlow" ya
   aparece al lado (login, admin login, instalar); sin él, `alt="KlippFlow"`.
 - Sustituye al placeholder anterior (`LogoKlippFlow`), que se eliminó junto con
@@ -112,6 +120,10 @@ dónde sale.
   vieja.
 - Los archivos con hash (`/assets/*`) se pueden cachear para siempre; en Vercel
   van con `Cache-Control: public, max-age=31536000, immutable`.
+- `badge-96.png` entra al precache por `globPatterns` (png) y viaja con la
+  revisión del build. El service worker nuevo cambia de contenido, así que el
+  banner **"Hay una versión nueva"** lo activa con `SKIP_WAITING`; no hay que
+  subir una versión de caché a mano.
 - `cleanupOutdatedCaches()` borra los precaches viejos al activar.
 
 ---
@@ -178,6 +190,8 @@ No hay despliegue HTTPS todavía, así que **nada de esto está verificado**.
 - [ ] El permiso de notificaciones solo se pide al pulsar el botón (nunca solo).
 - [ ] Tras conceder permiso, el barbero recibe una solicitud nueva como
       notificación y al pulsarla abre `/app/solicitudes`.
+- [ ] En Android el badge de la barra de estado se ve como una **silueta blanca**
+      (no como un cuadrado blanco).
 - [ ] Instalar una versión nueva (build) y reabrir: aparece "Hay una versión
       nueva"; "Actualizar" aplica y la suscripción push sigue viva.
 - [ ] Modo avión: aparece "Sin conexión" y desaparece al recuperar la red.
@@ -192,6 +206,9 @@ No hay despliegue HTTPS todavía, así que **nada de esto está verificado**.
   conviene regenerarlo con fondo `--ink` y el logo en hueso.
 - `logo-1024.png` no se usa: con `lg` (104 px) el de 512 sobra incluso a 3×, así
   que se excluye del precache (`globIgnores`) y ahorra ~800 KB de instalación.
+- **iOS ignora `badge`**: usa el ícono grande de la notificación y, en la
+  pantalla de inicio, `apple-touch-icon.png`. No es un fallo del badge de
+  Android.
 - El aviso de versión nueva es una banda, no un toast: se queda visible hasta
   que el usuario decide, para que no se pierda si está trabajando.
 - La frontera de error por zona se reinicia al cambiar de zona; dentro de la

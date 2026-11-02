@@ -5,6 +5,7 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { construirOpcionesNotificacion } from './features/notificaciones/domain/notificacion'
 import { urlDestinoSegura } from './features/notificaciones/domain/urlDestino'
 
 declare const self: ServiceWorkerGlobalScope & {
@@ -25,7 +26,6 @@ interface PayloadPush {
 
 const TITULO_POR_DEFECTO = 'Nueva solicitud de cita'
 const CUERPO_POR_DEFECTO = 'Tienes una nueva solicitud de cita.'
-const ICONO = '/icons/icon-192.png'
 
 interface MensajeRefresco {
   tipo: 'klippflow:refrescar'
@@ -119,12 +119,12 @@ self.addEventListener('push', (evento) => {
 
   evento.waitUntil(
     (async () => {
-      await self.registration.showNotification(titulo, {
-        body: cuerpo,
-        icon: ICONO,
-        badge: ICONO,
-        data: { url: urlDestinoSegura(payload.url, self.location.origin) },
-      })
+      // `icon` es el ícono grande a color; `badge` es el monocromático que
+      // Android usa como máscara de alfa en la barra de estado.
+      await self.registration.showNotification(
+        titulo,
+        construirOpcionesNotificacion(cuerpo, payload.url, self.location.origin),
+      )
       // Con la app abierta, la lista de Solicitudes se refresca sola.
       await avisarARefrescar()
     })(),

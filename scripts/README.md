@@ -29,9 +29,29 @@ tokens `--logo-background` y `--accent`.
 3. Reemplazar el dibujo de la “K” de `generate-icons.mjs` por la lectura del
    master (por ejemplo con `sharp`, si se decide agregarlo como dependencia de
    desarrollo) y volver a ejecutar `pnpm icons`.
-4. Actualizar `src/shared/ui/LogoKlippFlow.tsx` para usar
-   `/logo-klippflow.svg` en lugar del círculo provisional.
+4. Actualizar `src/shared/ui/Logo.tsx` para usar el archivo real con la ruta
+   absoluta `/icons/...` (nunca relativa: en `/b/CODIGO` se resolvería contra
+   `/b/`).
 5. Revisar que `public/manifest.webmanifest` (generado) siga apuntando a los
    cuatro archivos y que Chrome no reporte errores de instalación.
 
-No se debe agregar una dependencia de generación de imágenes sin acordarlo.
+`sharp` está como `devDependency` solo para `generar-badge.mjs`; no se usa en la
+app ni en el build.
+
+## `generar-badge.mjs`
+
+Genera el badge monocromático de las notificaciones push:
+
+```bash
+pnpm badge
+```
+
+- Salida: `public/icons/badge-96.png` (96×96, RGBA).
+- RGB blanco puro y la forma del logo en el canal alfa, con fondo transparente y
+  ~10 % de margen interno.
+- Android usa el alfa como máscara; **un PNG a color con fondo opaco se ve como
+  un cuadrado blanco**.
+- Fuente: `public/icons/logo-512.png`. Si tiene fondo transparente usa su alfa;
+  si fuera opaco, deriva el alfa de la luminosidad (oscuro = visible).
+- Es idempotente: se puede volver a ejecutar cuando cambie el logo real.
+

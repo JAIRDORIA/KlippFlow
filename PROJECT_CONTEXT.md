@@ -1,6 +1,7 @@
 # PROJECT_CONTEXT — Frontend KlippFlow
 
-Última actualización: **2026-10-31** (Prompt 8 del frontend: pulido de PWA).
+Última actualización: **2026-11-02** (Prompt 9: correcciones post-despliegue de
+logo y badge de notificación).
 
 ## 1. Qué es
 
@@ -131,6 +132,18 @@ Completado:
   - `vercel.json` (rewrites, caché y cabeceras de seguridad) y `.env.example`
     con las variables `VITE_`.
   - `docs/PWA.md` y `docs/DESPLIEGUE_FRONTEND.md`.
+- Correcciones post-despliegue (Prompt 9, 2026-11-02):
+  - **Logo en páginas públicas:** el relleno de la baldosa se calcula en px a
+    partir del lado (`14 %`). Un padding porcentual se resolvía contra el ancho
+    del contenedor y en `/b/:codigo` dejaba la imagen en 0×0: la baldosa hueso
+    se veía vacía. `src` absoluto, `width`/`height` explícitos y monograma de
+    respaldo si la imagen falla (`onError`).
+  - **Badge de notificación:** `public/icons/badge-96.png` es blanco puro con
+    la forma en el alfa (Android lo usa como máscara). Se genera desde el logo
+    con `pnpm badge` (`scripts/generar-badge.mjs`, `sharp` como devDependency).
+    El SW usa `icon: '/icons/icon-192.png'` y `badge: '/icons/badge-96.png'`.
+  - Pruebas nuevas de `Logo` (ruta absoluta, relleno en px, respaldo) y de
+    `construirOpcionesNotificacion` (rutas absolutas, URL segura).
 
 No implementado todavía:
 
@@ -565,6 +578,29 @@ separados. `/app/*` exige sesión de barbero.
   herramienta" (Vercel) para el mismo `noindex`.
 - **Sin CSP:** no se añade hasta que se pida (regla del prompt).
 
+### Decisiones del Prompt 9 (logo y badge)
+
+- **Causa real del logo vacío:** no era un 404. `public/icons/logo-512.png`
+  existe, se sirve con 200 y el `src` ya era absoluto. Era el `padding: 14%`:
+  el porcentaje se resuelve contra el ancho del contenedor (420/520 px), no
+  contra los 40 px de la baldosa `sm`; el contenido de la imagen quedaba en
+  0×0 y solo se veía el círculo `bg-accent`. Ahora el relleno es
+  `lado * 0.14` en px.
+- **Rutas absolutas en todo `public/`:** logo, favicons del `index.html`,
+  manifest y badge usan `/icons/...`; no queda ninguna ruta relativa.
+- **Respaldo del logo:** `onError` cambia el `<img>` por un monograma “K” con
+  `text-ink` sobre la misma baldosa; nunca queda un círculo vacío.
+- **Badge monocromático:** Android usa el alfa como máscara; `icon-192.png` a
+  color y opaco producía el cuadrado blanco. `badge-96.png` se genera desde el
+  alfa del logo (blanco puro, fondo transparente, 10 % de margen) con
+  `pnpm badge`. El logo tiene fondo transparente, así que se usó su alfa y no
+  la luminosidad.
+- **Precache y actualización:** `badge-96.png` entra por `globPatterns` (png);
+  el precache pasa de 48 a 49 entradas. No se toca el modo `prompt`: el SW
+  nuevo cambia de contenido y el banner “Hay una versión nueva” lo activa con
+  `SKIP_WAITING`; añadir `skipWaiting()` automático habría recargado la app.
+- **iOS:** ignora `badge`; usa el ícono grande y `apple-touch-icon.png`.
+
 ## 10. Verificación
 
 Comandos obligatorios:
@@ -580,28 +616,30 @@ pnpm dev      # http://localhost:3001
 
 Comprobado en este prompt:
 
-- 47 archivos de prueba, 420 pruebas, todas en verde con TZ por defecto, UTC y
-  Asia/Tokyo.
+- 49 archivos de prueba, 427 pruebas, en verde (TZ por defecto).
 - TypeScript y ESLint sin errores.
 - Build de producción correcto: `dist/` con `index.html`,
-  `manifest.webmanifest`, `robots.txt`, `sw.js` (~21 KB) e `icons/`.
+  `manifest.webmanifest`, `robots.txt`, `sw.js` e `icons/` (incluye
+  `logo-512.png` y `badge-96.png`).
 - El service worker generado conserva `push`, `notificationclick`,
-  `showNotification` y el mensaje `klippflow:refrescar`, precachea
-  `index.html` (48 entradas) y solo hace `skipWaiting` al recibir
+  `showNotification` y el mensaje `klippflow:refrescar`; usa
+  `icon: '/icons/icon-192.png'` y `badge: '/icons/badge-96.png'`, precachea
+  `index.html` (49 entradas) y solo hace `skipWaiting` al recibir
   `SKIP_WAITING`.
+- El CSS de producción ya no contiene la regla de padding porcentual de la
+  baldosa del logo.
 - Manifest comprobado en `dist`: `start_url: /app`, `scope: /`,
   `display: standalone`, `lang: es-CO`, íconos 192 y 512 `any` más el
   `maskable` en una entrada aparte.
 - Sin hex fuera de `tokens.css` (solo el theme-color del manifest y de
   `index.html`, con el comentario que indica su token de origen).
-- Pruebas nuevas: mapeo ruta → título, zona, títulos de la 404 y `noindex`
-  (`src/app/rutas.test.ts`) y la regla de comprobación de versión cada 30
-  minutos (`src/features/pwa/domain/actualizacion.test.ts`).
-- Ajustes visuales del mismo día: contadores de Hoy, horas en 12 h y sin "Ver
-  como cliente" en Ajustes.
-- Lo visual (Lighthouse, instalación, iPhone real y el flujo de actualización
-  del service worker) es manual: ver `docs/PWA.md` §6. Nada de eso queda
-  marcado como verificado aquí.
+- Pruebas nuevas del Prompt 9: `src/shared/ui/Logo.test.tsx` (ruta absoluta,
+  relleno en px, respaldo) y
+  `src/features/notificaciones/domain/notificacion.test.ts` (rutas absolutas
+  del ícono y el badge, URL segura del clic).
+- Lo visual (Lighthouse, instalación, iPhone real, badge en Android y el flujo
+  de actualización del service worker) es manual: ver `docs/PWA.md` §6 y
+  `docs/NOTIFICACIONES.md` §8. Nada de eso queda marcado como verificado aquí.
 
 Nota de herramienta: el build emite una advertencia de Vite 8 proveniente de
 `vite-plugin-pwa` (`inlineDynamicImports` deprecado). No es un error de
@@ -610,11 +648,16 @@ versión compatible con la nueva API de Rollup.
 
 ## 11. Siguiente prompt
 
-Queda la puesta en producción:
+El frontend ya está en producción (`https://klippflow.vercel.app`) y el backend
+en Clever Cloud. Queda:
 
-- Despliegue del backend (variables `APP_PUBLIC_URL` y CORS del dominio real) y
-  del frontend en Vercel siguiendo `docs/DESPLIEGUE_FRONTEND.md`.
-- Prueba en iPhone real con la app ya en HTTPS: `docs/PWA.md` §6.
-- Lighthouse sobre el preview y corrección de lo que quede por debajo de 90.
+- Confirmar en Clever Cloud `APP_PUBLIC_URL=https://klippflow.vercel.app` y el
+  CORS del mismo origen, y reiniciar el backend.
+- Verificar en Android que el badge nuevo se ve como silueta y en iPhone que
+  `badge` se ignora (documentado en `docs/NOTIFICACIONES.md` §3).
+- Probar el flujo real con la PWA instalada: login, reserva, push y
+  actualización del service worker.
+- Lighthouse sobre el dominio real y corrección de lo que quede por debajo
+  de 90.
 - "Enviar prueba" de notificaciones (`POST /barbero/push/probar`) si se pide.
 

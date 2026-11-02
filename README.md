@@ -121,18 +121,22 @@ barbero. Una ruta desconocida muestra “Página no encontrada”.
   abiertas para refrescar datos.
 - El service worker solo se activa en el build de producción (`pnpm preview`).
 
-### Íconos provisionales
+### Íconos y badge
 
-Los archivos de `public/icons/` son **provisionales**: fondo `#121211` con una
-“K” hueso. Se generan localmente, sin red ni dependencias, con `pnpm icons`
-(ver `scripts/README.md`).
+Los íconos del manifest y los favicons siguen siendo **provisionales**: fondo
+`#121211` con una “K” hueso. Se generan localmente con `pnpm icons` (ver
+`scripts/README.md`).
 
-El logo de la pantalla de login también es provisional: un círculo `--ink` con
-una “K” en `--accent` (`src/shared/ui/LogoKlippFlow.tsx`). Cuando exista el logo
-real, colócalo en **`public/logo-klippflow.svg`** (o el master que entregue
-diseño) y reemplaza ese componente por un `<img>` con esa ruta.
+El logo de la app es real (`public/icons/logo-512.png`) y lo pinta
+`src/shared/ui/Logo.tsx` sobre una baldosa hueso, con ruta absoluta y monograma
+de respaldo si la imagen falla.
+
+El badge de las notificaciones push (`public/icons/badge-96.png`) es blanco con
+transparencia y se genera desde el logo con `pnpm badge`.
 
 ## Despliegue
+
+Producción: **https://klippflow.vercel.app**
 
 El frontend se publica en Vercel con `vercel.json` (rewrites de SPA, caché y
 cabeceras). Los pasos, las variables `VITE_*` y los cambios necesarios en el

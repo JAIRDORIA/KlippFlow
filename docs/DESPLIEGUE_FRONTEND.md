@@ -1,7 +1,8 @@
 # Despliegue del frontend (Vercel)
 
 Pasos para publicar KlippFlow en Vercel y qué hay que ajustar en el backend.
-Sin valores reales: los dominios de los ejemplos son de mentira.
+Los ejemplos de las secciones siguientes son genéricos; los valores reales de
+este despliegue están en el §0.
 
 ---
 
@@ -10,19 +11,21 @@ Sin valores reales: los dominios de los ejemplos son de mentira.
 - Backend ya desplegado en Clever Cloud:
   `https://app-09b36103-6e0a-40a5-b984-06c43f12e2f8.cleverapps.io`
   (sin barra final).
-- Frontend: este repositorio, rama `main`, importado en Vercel.
+- Frontend desplegado en Vercel (rama `main`):
+  - **Producción / alias estable:** `https://klippflow.vercel.app`
+  - **Deployment:** `https://klipp-flow-e4xeo72uf-serranojair2026-3064.vercel.app`
 - Variables en Vercel:
 
   | Variable | Valor | Entornos |
   |---|---|---|
   | `VITE_API_URL` | `https://app-09b36103-6e0a-40a5-b984-06c43f12e2f8.cleverapps.io` | Production y Preview |
-  | `VITE_APP_PUBLIC_URL` | el dominio de producción que asigne Vercel (p. ej. `https://klippflow-frontend.vercel.app`) | Production |
+  | `VITE_APP_PUBLIC_URL` | `https://klippflow.vercel.app` | Production |
 
   `VITE_APP_PUBLIC_URL` es opcional: si falta, los links usan el origen actual.
   Si se agrega o se cambia, hay que volver a desplegar.
 
-- En Clever Cloud, **después** de conocer el dominio de Vercel:
-  1. `APP_PUBLIC_URL` = ese dominio, sin barra final.
+- En Clever Cloud:
+  1. `APP_PUBLIC_URL=https://klippflow.vercel.app` (sin barra final).
   2. CORS (`main.ts`): hoy el backend permite **un solo** origen
      (`APP_PUBLIC_URL`). Las URLs de *preview* de Vercel (`*.vercel.app`)
      fallarán hasta que se agreguen al arreglo de CORS; por eso el flujo real
