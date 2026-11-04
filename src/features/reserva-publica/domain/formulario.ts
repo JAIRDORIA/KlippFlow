@@ -1,3 +1,4 @@
+import type { CrearCitaClienteBody } from '@/features/cuentas-cliente/types'
 import type { CrearCitaBody, ServicioPublico } from '../types'
 import { calcularTotales, esDuracionValida, type SeleccionServicios } from './calculo'
 import { normalizarCelular } from './celular'
@@ -217,14 +218,13 @@ function todosLosIdsExisten(
   return ids.every((id) => idsCatalogo.has(id))
 }
 
-export function esFormularioValido(
+function esSeleccionValida(
   estado: EstadoFormularioReserva,
   catalogo: readonly ServicioPublico[],
 ): boolean {
   if (estado.serviciosTitular.length === 0) return false
   if (estado.serviciosTitular.length > MAXIMO_SERVICIOS_POR_PERSONA) return false
   if (!estado.fecha || !estado.horaInicio) return false
-  if (Object.keys(validarDatos(estado.datos)).length > 0) return false
 
   const idsCatalogo = new Set(catalogo.map((servicio) => servicio.id))
   if (!todosLosIdsExisten(estado.serviciosTitular, idsCatalogo)) return false
@@ -243,6 +243,33 @@ export function esFormularioValido(
   return esDuracionValida(totales.duracionMinutos)
 }
 
+export function esFormularioValido(
+  estado: EstadoFormularioReserva,
+  catalogo: readonly ServicioPublico[],
+): boolean {
+  if (Object.keys(validarDatos(estado.datos)).length > 0) return false
+  return esSeleccionValida(estado, catalogo)
+}
+
+/** Validez de la reserva con sesión: el nombre/celular salen del perfil. */
+export function esFormularioClienteValido(
+  estado: EstadoFormularioReserva,
+  catalogo: readonly ServicioPublico[],
+): boolean {
+  return esSeleccionValida(estado, catalogo)
+}
+
+function personasDelFormulario(estado: EstadoFormularioReserva) {
+  return [
+    { servicioIds: Array.from(new Set(estado.serviciosTitular)) },
+    ...(estado.modo === 'acompanantes'
+      ? estado.acompanantes.map((acompanante) => ({
+          servicioIds: Array.from(new Set(acompanante.servicioIds)),
+        }))
+      : []),
+  ]
+}
+
 /** Construye exactamente el cuerpo documentado o null si el formulario no es válido. */
 export function construirCuerpoCrearCita(
   estado: EstadoFormularioReserva,
@@ -253,14 +280,7 @@ export function construirCuerpoCrearCita(
   const celular = normalizarCelular(estado.datos.celular)
   if (!celular) return null
 
-  const personas = [
-    { servicioIds: Array.from(new Set(estado.serviciosTitular)) },
-    ...(estado.modo === 'acompanantes'
-      ? estado.acompanantes.map((acompanante) => ({
-          servicioIds: Array.from(new Set(acompanante.servicioIds)),
-        }))
-      : []),
-  ]
+  const personas = personasDelFormulario(estado)
 
   const cuerpo: CrearCitaBody = {
     nombre: estado.datos.nombre.trim(),
@@ -274,4 +294,23 @@ export function construirCuerpoCrearCita(
   if (correo) cuerpo.correo = correo
 
   return cuerpo
+}
+
+/**
+ * Cuerpo documentado para POST /cliente/barberos/:codigo/citas.
+ * El nombre, celular y correo salen del perfil autenticado.
+ */
+export function construirCuerpoCitaCliente(
+  estado: EstadoFormularioReserva,
+  catalogo: readonly ServicioPublico[],
+): CrearCitaClienteBody | null {
+  if (!esFormularioClienteValido(estado, catalogo) || !estado.horaInicio) {
+    return null
+  }
+
+  return {
+    fecha: estado.fecha,
+    horaInicio: estado.horaInicio,
+    personas: personasDelFormulario(estado),
+  }
 }

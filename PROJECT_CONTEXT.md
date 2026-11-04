@@ -320,6 +320,7 @@ separados. `/app/*` exige sesión de barbero.
 
 ## 7. Autenticación
 
+- **Frontend A (cliente):** login unificado, Google, completar cuenta, `/mi`, `/mi/nueva-contrasena` y reserva con sesión; ranura única `klippflow.sesion` con `{ token, tipo, usuario }` y admin separado; ver `docs/CUENTAS_CLIENTE_FRONT.md`.
 - Login: `POST /auth/login/barbero` con `{ username, password }`.
 - Respuesta: `{ accessToken, barbero: { id, codigoUnico, nombres, apellidos,
   nombreBarberia, username, estadoCuenta } }`.

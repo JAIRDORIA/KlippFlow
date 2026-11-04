@@ -1,8 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { ErrorPeticion } from '@/shared/api/client'
 import {
-  crearCita,
   obtenerBarberoPublico,
   obtenerDisponibilidad,
   obtenerSeguimiento,
@@ -13,7 +12,7 @@ import {
 } from './almacenamientoCitas'
 import { debeMostrarAvisoCita, debeOlvidarCita } from './domain/avisoCita'
 import { esError404 } from './domain/errores'
-import type { CitaGuardada, CrearCitaBody } from './types'
+import type { CitaGuardada } from './types'
 
 function reintentar(intentos: number, error: unknown): boolean {
   if (error instanceof ErrorPeticion && error.status >= 400 && error.status < 500) {
@@ -57,12 +56,6 @@ export function useDisponibilidad(
     staleTime: 20_000,
     refetchOnWindowFocus: false,
     retry: reintentar,
-  })
-}
-
-export function useCrearCita(codigo: string) {
-  return useMutation({
-    mutationFn: (cuerpo: CrearCitaBody) => crearCita(codigo, cuerpo),
   })
 }
 

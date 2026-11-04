@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CLAVE_SESION_BARBERO } from './almacenamientoSesion'
-import { peticion } from './client'
+import { CLAVE_SESION } from './almacenamientoSesion'
+import { construirDestinoLogin, peticion } from './client'
 
 type FetchMock = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
@@ -47,8 +47,8 @@ describe('peticion', () => {
 
   it('inyecta el token de la zona barbero', async () => {
     window.localStorage.setItem(
-      CLAVE_SESION_BARBERO,
-      JSON.stringify({ accessToken: 'token-barbero' }),
+      CLAVE_SESION,
+      JSON.stringify({ token: 'token-barbero', tipo: 'barbero' }),
     )
     fetchMock.mockResolvedValue(respuestaJson({ ok: true }, 200))
 
@@ -134,5 +134,34 @@ describe('peticion', () => {
       mensaje: 'Falta configurar VITE_API_URL en el archivo .env.',
     })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('en 401 limpia la sesión de cliente', async () => {
+    window.history.replaceState({}, '', '/login')
+    window.localStorage.setItem(
+      CLAVE_SESION,
+      JSON.stringify({ token: 'token-cliente', tipo: 'cliente' }),
+    )
+    fetchMock.mockResolvedValue(
+      respuestaJson({ message: 'Sesión inválida', statusCode: 401 }, 401),
+    )
+
+    await expect(
+      peticion('/cliente/perfil', { zona: 'cliente' }),
+    ).rejects.toMatchObject({ status: 401 })
+
+    expect(window.localStorage.getItem(CLAVE_SESION)).toBeNull()
+  })
+
+  it('construye el destino del login conservando solo volver seguro', () => {
+    expect(construirDestinoLogin('cliente', 'sesion-expirada', '/mi')).toBe(
+      '/login?motivo=sesion-expirada&volver=%2Fmi',
+    )
+    expect(construirDestinoLogin('barbero', 'sesion-expirada', '/app/hoy')).toBe(
+      '/login?motivo=sesion-expirada',
+    )
+    expect(construirDestinoLogin('admin', 'expirada', '/admin')).toBe(
+      '/admin/login?motivo=expirada',
+    )
   })
 })

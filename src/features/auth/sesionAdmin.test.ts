@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  CLAVE_SESION,
   CLAVE_SESION_ADMIN,
-  CLAVE_SESION_BARBERO,
   EVENTO_SESION_CERRADA,
   type DetalleSesionCerrada,
 } from '@/shared/api/almacenamientoSesion'
+import { guardarSesion } from './sesion'
 import {
   borrarSesionAdmin,
   cargarSesionAdmin,
   guardarSesionAdmin,
 } from './sesionAdmin'
-import { guardarSesionBarbero } from './sesionBarbero'
+import type { Sesion } from './types'
 
 /** JWT de mentira: solo importa el payload (`tipo`, `exp`), no la firma. */
 function jwt(payload: Record<string, unknown>): string {
@@ -30,6 +31,23 @@ const ADMIN = {
   nombre: 'Jair',
 }
 
+function sesionBarberoPrueba(): Sesion {
+  return {
+    token: jwt({ sub: 7, tipo: 'barbero', username: 'ana.paz', exp: enHoras(2) }),
+    tipo: 'barbero',
+    usuario: {
+      tipo: 'barbero',
+      id: 7,
+      codigoUnico: 'BARB-0007',
+      nombres: 'Ana',
+      apellidos: 'Paz',
+      nombreBarberia: 'Ana Barber',
+      username: 'ana.paz',
+      estadoCuenta: 'activo',
+    },
+  }
+}
+
 beforeEach(() => {
   window.localStorage.clear()
 })
@@ -43,7 +61,7 @@ describe('sesión de administrador', () => {
   it('usa una clave distinta de la del barbero', () => {
     guardarSesionAdmin(ADMIN)
     expect(window.localStorage.getItem(CLAVE_SESION_ADMIN)).not.toBeNull()
-    expect(window.localStorage.getItem(CLAVE_SESION_BARBERO)).toBeNull()
+    expect(window.localStorage.getItem(CLAVE_SESION)).toBeNull()
   })
 
   it('descarta un token de barbero guardado en la clave de admin', () => {
@@ -74,17 +92,12 @@ describe('sesión de administrador', () => {
 
   it('al borrar la sesión del admin no toca la del barbero', () => {
     guardarSesionAdmin(ADMIN)
-    guardarSesionBarbero({
-      accessToken: jwt({ sub: 7, tipo: 'barbero', exp: enHoras(2) }),
-      nombre: 'Ana Paz',
-      username: 'ana.paz',
-      nombreBarberia: 'Ana Barber',
-    })
+    guardarSesion(sesionBarberoPrueba())
 
     borrarSesionAdmin('manual')
 
     expect(cargarSesionAdmin()).toBeNull()
-    expect(window.localStorage.getItem(CLAVE_SESION_BARBERO)).not.toBeNull()
+    expect(window.localStorage.getItem(CLAVE_SESION)).not.toBeNull()
   })
 
   it('avisa del cierre con la zona admin', () => {

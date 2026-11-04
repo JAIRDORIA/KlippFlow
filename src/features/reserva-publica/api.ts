@@ -1,8 +1,6 @@
 import { peticion } from '@/shared/api/client'
 import type {
   BarberoPublico,
-  CrearCitaBody,
-  CitaCreada,
   DisponibilidadPublica,
   SeguimientoCita,
 } from './types'
@@ -28,17 +26,6 @@ export function obtenerDisponibilidad(
     `${rutaBarbero(codigo)}/disponibilidad?${parametros.toString()}`,
     { zona: 'publico' },
   )
-}
-
-export function crearCita(
-  codigo: string,
-  cuerpo: CrearCitaBody,
-): Promise<CitaCreada> {
-  return peticion<CitaCreada>(`${rutaBarbero(codigo)}/citas`, {
-    metodo: 'POST',
-    cuerpo,
-    zona: 'publico',
-  })
 }
 
 export function obtenerSeguimiento(token: string): Promise<SeguimientoCita> {

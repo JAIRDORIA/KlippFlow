@@ -1,7 +1,20 @@
-import { useMutation } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom'
+import { useTituloPagina } from '@/app/useTituloPagina'
+import {
+  mapearErrorGoogle,
+  mapearErrorLogin,
+} from '@/features/cuentas-cliente/domain/errores'
+import {
+  useLoginGoogle,
+  useLoginUnificado,
+} from '@/features/cuentas-cliente/hooks'
 import {
   almacenDelNavegador,
   decidirOnboarding,
@@ -12,15 +25,15 @@ import {
   leerEntornoDispositivo,
   leerPermiso,
 } from '@/features/notificaciones/domain/plataforma'
-import { ErrorPeticion } from '@/shared/api/client'
-import { useTituloPagina } from '@/app/useTituloPagina'
+import { rutaInicialPorRol, volverSeguro } from '@/shared/lib/rutas'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Logo } from '@/shared/ui/Logo'
+import { BotonGoogle } from './components/BotonGoogle'
 import { useAuth } from './useAuth'
 
-/** Tras entrar: onboarding de instalación/notificaciones o directo a Hoy. */
-function destinoTrasEntrar(): string {
+/** Onboarding de instalación/notificaciones del barbero; los clientes van a /mi. */
+function destinoTrasEntrarBarbero(): string {
   const deteccion = detectarDispositivo(leerEntornoDispositivo())
   const decision = decidirOnboarding({
     plataforma: deteccion.plataforma,
@@ -33,35 +46,17 @@ function destinoTrasEntrar(): string {
   return decision === 'nada' ? '/app/hoy' : '/instalar'
 }
 
-
-function mensajeDeError(error: unknown): string {
-  if (error instanceof ErrorPeticion) {
-    if (error.status === 401) return 'Usuario o contraseña incorrectos'
-    if (error.status === 403) {
-      return (
-        error.mensaje ||
-        'Tu cuenta no está activa. Habla con el administrador de KlippFlow.'
-      )
-    }
-    if (error.status === 429) {
-      return 'Demasiados intentos. Espera un minuto e inténtalo de nuevo.'
-    }
-    if (error.status === 0) return 'No pudimos conectar. Revisa tu internet.'
-    if (error.status === 400) return error.mensaje
-  }
-  return 'Algo salió mal. Inténtalo de nuevo.'
-}
-
 function avisoPorMotivo(motivo: string | null): string | null {
   if (motivo === 'sesion-expirada') return 'Tu sesión caducó. Entra de nuevo.'
   if (motivo === 'cuenta-no-activa') {
     return 'Tu cuenta no está activa. Habla con el administrador de KlippFlow.'
   }
+  if (motivo === 'google-reiniciar') return 'Vuelve a continuar con Google'
   return null
 }
 
 export function LoginPage() {
-  const { estaAutenticado, login } = useAuth()
+  const { estaAutenticado, tipo } = useAuth()
   const navegar = useNavigate()
   useTituloPagina()
   const [parametros] = useSearchParams()
@@ -70,24 +65,64 @@ export function LoginPage() {
   const [mostrarPassword, setMostrarPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const recuperar = parametros.get('recuperar') === '1'
+  const volver = volverSeguro(parametros.get('volver'))
   const aviso = avisoPorMotivo(parametros.get('motivo'))
   const puedeEntrar = username.trim().length > 0 && password.length > 0
 
-  const mutacion = useMutation({
-    mutationFn: login,
-    onSuccess: () => navegar(destinoTrasEntrar(), { replace: true }),
-    onError: (fallo) => setError(mensajeDeError(fallo)),
-  })
+  const login = useLoginUnificado()
+  const google = useLoginGoogle()
+  const pendiente = login.isPending || google.isPending
 
   if (estaAutenticado) {
-    return <Navigate to="/app/hoy" replace />
+    return <Navigate to={rutaInicialPorRol(tipo)} replace />
   }
 
   function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!puedeEntrar || mutacion.isPending) return
+    if (!puedeEntrar || pendiente) return
     setError(null)
-    mutacion.mutate({ username: username.trim(), password })
+    login.mutate(
+      { usuario: username.trim(), contrasena: password },
+      {
+        onSuccess: (respuesta) => {
+          const destino =
+            volver ??
+            (respuesta.tipo === 'barbero'
+              ? destinoTrasEntrarBarbero()
+              : rutaInicialPorRol('cliente'))
+          navegar(destino, { replace: true })
+        },
+        onError: (fallo) => setError(mapearErrorLogin(fallo)),
+      },
+    )
+  }
+
+  function entrarConGoogle(idToken: string) {
+    if (pendiente) return
+    setError(null)
+    google.mutate(idToken, {
+      onSuccess: (respuesta) => {
+        if (respuesta.requiereCompletar) {
+          const destino = new URLSearchParams()
+          if (volver) destino.set('volver', volver)
+          const consulta = destino.toString()
+          navegar(
+            `/registro/completar${consulta ? `?${consulta}` : ''}`,
+            { replace: true },
+          )
+          return
+        }
+
+        if (recuperar) {
+          navegar('/mi/nueva-contrasena', { replace: true })
+          return
+        }
+
+        navegar(volver ?? '/mi', { replace: true })
+      },
+      onError: (fallo) => setError(mapearErrorGoogle(fallo)),
+    })
   }
 
   return (
@@ -106,88 +141,144 @@ export function LoginPage() {
         </p>
       </div>
 
-      <form
-        onSubmit={enviar}
-        className="mx-auto mt-12 flex w-full max-w-[360px] flex-col gap-5"
-        noValidate
-      >
-        <Input
-          etiqueta="Usuario"
-          name="username"
-          value={username}
-          onChange={(evento) => {
-            setUsername(evento.target.value)
-            setError(null)
-          }}
-          autoComplete="username"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="Tu usuario"
-        />
-        <Input
-          id="login-password"
-          etiqueta="Contraseña"
-          name="password"
-          type={mostrarPassword ? 'text' : 'password'}
-          value={password}
-          onChange={(evento) => {
-            setPassword(evento.target.value)
-            setError(null)
-          }}
-          autoComplete="current-password"
-          placeholder="Tu contraseña"
-          accionDerecha={
-            <button
-              type="button"
-              aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              aria-pressed={mostrarPassword}
-              aria-controls="login-password"
-              onMouseDown={(evento) => evento.preventDefault()}
-              onClick={() => setMostrarPassword((visible) => !visible)}
-              className="inline-flex size-[var(--height-button-compact)] items-center justify-center rounded-[var(--radius-button-card)] text-secondary transition-colors hover:bg-white-5 hover:text-text"
+      {recuperar ? (
+        <section className="mx-auto mt-12 flex w-full max-w-[360px] flex-col gap-5">
+          <h2 className="type-card-title text-center">
+            Entra con Google para crear una contraseña nueva
+          </h2>
+
+          {aviso && (
+            <p
+              role="status"
+              className="type-helper rounded-[var(--radius-warning)] border border-amber-30 bg-amber-10 px-[var(--space-warning)] py-[var(--space-warning)] text-amber"
             >
-              {mostrarPassword ? (
-                <EyeOff aria-hidden="true" size={18} strokeWidth={1.6} />
-              ) : (
-                <Eye aria-hidden="true" size={18} strokeWidth={1.6} />
-              )}
-            </button>
-          }
-        />
+              {aviso}
+            </p>
+          )}
 
-        {aviso && (
-          <p
-            role="status"
-            className="type-helper rounded-[var(--radius-warning)] border border-amber-30 bg-amber-10 px-[var(--space-warning)] py-[var(--space-warning)] text-amber"
+          {error && (
+            <p
+              role="alert"
+              className="type-helper rounded-[var(--radius-warning)] border border-red-30 bg-red-10 px-[var(--space-warning)] py-[var(--space-warning)] text-red"
+            >
+              {error}
+            </p>
+          )}
+
+          <BotonGoogle
+            onCredential={entrarConGoogle}
+            deshabilitado={pendiente}
+          />
+        </section>
+      ) : (
+        <>
+          <form
+            onSubmit={enviar}
+            className="mx-auto mt-12 flex w-full max-w-[360px] flex-col gap-5"
+            noValidate
           >
-            {aviso}
+            <Input
+              etiqueta="Usuario"
+              name="username"
+              value={username}
+              onChange={(evento) => {
+                setUsername(evento.target.value)
+                setError(null)
+              }}
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="Tu usuario"
+            />
+            <Input
+              id="login-password"
+              etiqueta="Contraseña"
+              name="password"
+              type={mostrarPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(evento) => {
+                setPassword(evento.target.value)
+                setError(null)
+              }}
+              autoComplete="current-password"
+              placeholder="Tu contraseña"
+              accionDerecha={
+                <button
+                  type="button"
+                  aria-label={
+                    mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
+                  }
+                  aria-pressed={mostrarPassword}
+                  aria-controls="login-password"
+                  onMouseDown={(evento) => evento.preventDefault()}
+                  onClick={() => setMostrarPassword((visible) => !visible)}
+                  className="inline-flex size-[var(--height-button-compact)] items-center justify-center rounded-[var(--radius-button-card)] text-secondary transition-colors hover:bg-white-5 hover:text-text"
+                >
+                  {mostrarPassword ? (
+                    <EyeOff aria-hidden="true" size={18} strokeWidth={1.6} />
+                  ) : (
+                    <Eye aria-hidden="true" size={18} strokeWidth={1.6} />
+                  )}
+                </button>
+              }
+            />
+
+            <div className="flex justify-end">
+              <Link
+                to="/login?recuperar=1"
+                className="type-small inline-flex min-h-[var(--height-button-compact)] items-center text-secondary underline underline-offset-2 hover:text-text"
+              >
+                Olvidé mi contraseña
+              </Link>
+            </div>
+
+            {aviso && (
+              <p
+                role="status"
+                className="type-helper rounded-[var(--radius-warning)] border border-amber-30 bg-amber-10 px-[var(--space-warning)] py-[var(--space-warning)] text-amber"
+              >
+                {aviso}
+              </p>
+            )}
+
+            {error && (
+              <p
+                role="alert"
+                className="type-helper rounded-[var(--radius-warning)] border border-red-30 bg-red-10 px-[var(--space-warning)] py-[var(--space-warning)] text-red"
+              >
+                {error}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              className="mt-2 w-full"
+              disabled={!puedeEntrar || pendiente}
+              cargando={login.isPending}
+            >
+              Entrar
+            </Button>
+          </form>
+
+          <div className="mx-auto mt-8 flex w-full max-w-[360px] items-center gap-3">
+            <span aria-hidden="true" className="h-px flex-1 bg-line" />
+            <span className="type-helper">o</span>
+            <span aria-hidden="true" className="h-px flex-1 bg-line" />
+          </div>
+
+          <div className="mx-auto mt-5 w-full max-w-[360px]">
+            <BotonGoogle
+              onCredential={entrarConGoogle}
+              deshabilitado={pendiente}
+            />
+          </div>
+
+          <p className="type-helper mx-auto mt-8 max-w-[360px] text-center">
+            Si es tu primera vez, crearás tu cuenta.
           </p>
-        )}
-
-        {error && (
-          <p
-            role="alert"
-            className="type-helper rounded-[var(--radius-warning)] border border-red-30 bg-red-10 px-[var(--space-warning)] py-[var(--space-warning)] text-red"
-          >
-            {error}
-          </p>
-        )}
-
-        <Button
-          type="submit"
-          className="mt-2 w-full"
-          disabled={!puedeEntrar}
-          cargando={mutacion.isPending}
-        >
-          Entrar
-        </Button>
-      </form>
-
-      <p className="type-helper mx-auto mt-10 max-w-[360px] text-center">
-        Tu cuenta la crea el administrador de KlippFlow. Si no puedes entrar, tu cuenta
-        puede estar suspendida o vencida.
-      </p>
+        </>
+      )}
     </main>
   )
 }

@@ -27,7 +27,14 @@ export function zonaDeRuta(pathname: string): Zona {
     return 'barbero'
   }
 
-  if (ruta === '/b' || ruta.startsWith('/b/') || ruta.startsWith('/cita/')) {
+  if (
+    ruta === '/b' ||
+    ruta.startsWith('/b/') ||
+    ruta.startsWith('/cita/') ||
+    ruta === '/mi' ||
+    ruta.startsWith('/mi/') ||
+    ruta === '/registro/completar'
+  ) {
     return 'publico'
   }
 
@@ -68,6 +75,10 @@ export function tituloDeRuta(
   if (ruta === '/instalar' || ruta === '/app/instalar') return `Instalar · ${SUFIJO}`
   if (ruta === '/dev') return `Kit visual · ${SUFIJO}`
 
+  if (ruta === '/mi') return `Mi cuenta · ${SUFIJO}`
+  if (ruta === '/mi/nueva-contrasena') return `Nueva contraseña · ${SUFIJO}`
+  if (ruta === '/registro/completar') return `Completa tu cuenta · ${SUFIJO}`
+
   if (ruta === '/app' || ruta === '/app/hoy') return `Hoy · ${SUFIJO}`
   if (ruta === '/app/solicitudes') return `Solicitudes · ${SUFIJO}`
   if (ruta === '/app/cuentas') return `Cuentas · ${SUFIJO}`
@@ -91,7 +102,14 @@ export function tituloDeRuta(
 }
 
 /** Rutas que exigen sesión o son herramientas internas del barbero/admin. */
-export const PREFIJOS_PRIVADOS = ['/app', '/admin', '/login', '/instalar'] as const
+export const PREFIJOS_PRIVADOS = [
+  '/app',
+  '/admin',
+  '/login',
+  '/instalar',
+  '/mi',
+  '/registro',
+] as const
 
 /**
  * Rutas públicas que tampoco se indexan: no queremos que Google liste a cada

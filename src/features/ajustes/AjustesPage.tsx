@@ -12,7 +12,7 @@ import { TarjetaLink } from './components/TarjetaLink'
 
 /** Pantalla Ajustes (`/app/ajustes`), como DISENO.md 6.9. */
 export function AjustesPage() {
-  const { sesion, cerrarSesion } = useAuth()
+  const { usuario, nombre, cerrarSesion } = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
@@ -20,8 +20,10 @@ export function AjustesPage() {
   const [saliendo, setSaliendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const nombreBarberia =
+    usuario?.tipo === 'barbero' ? usuario.nombreBarberia : null
   const eyebrow =
-    [sesion?.nombre, sesion?.nombreBarberia].filter(Boolean).join(' · ') || 'TU CUENTA'
+    [nombre, nombreBarberia].filter(Boolean).join(' · ') || 'TU CUENTA'
 
   async function salir(): Promise<void> {
     if (saliendo) return

@@ -18,6 +18,10 @@ const CONTENIDO = {
     descripcion: 'El enlace puede estar roto o la página cambió de lugar.',
     accion: { texto: 'Ir al panel', destino: '/admin' },
   },
+  cliente: {
+    descripcion: 'El enlace puede estar roto o la página cambió de lugar.',
+    accion: { texto: 'Ir a mi cuenta', destino: '/mi' },
+  },
   ninguna: {
     descripcion: 'Pide a tu barbero su link de reservas.',
     accion: { texto: 'Escribir mi código', destino: '/b' },

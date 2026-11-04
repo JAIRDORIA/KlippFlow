@@ -1,5 +1,5 @@
+import { cargarSesion } from '@/features/auth/sesion'
 import { cargarSesionAdmin } from '@/features/auth/sesionAdmin'
-import { cargarSesionBarbero } from '@/features/auth/sesionBarbero'
 
 /**
  * Qué sesión hay ahora mismo, sin depender de un provider de React.
@@ -9,10 +9,12 @@ import { cargarSesionBarbero } from '@/features/auth/sesionBarbero'
  * acepta un token vigente y del tipo correcto; la sesión de administrador no se
  * revela si no existe.
  */
-export type SesionVisible = 'barbero' | 'admin' | 'ninguna'
+export type SesionVisible = 'barbero' | 'cliente' | 'admin' | 'ninguna'
 
 export function sesionVisible(ahoraMs: number = Date.now()): SesionVisible {
-  if (cargarSesionBarbero(ahoraMs)) return 'barbero'
+  const sesion = cargarSesion(ahoraMs)
+  if (sesion?.tipo === 'barbero') return 'barbero'
+  if (sesion?.tipo === 'cliente') return 'cliente'
   if (cargarSesionAdmin(ahoraMs)) return 'admin'
   return 'ninguna'
 }

@@ -404,3 +404,8 @@ sistema visual (tokens, tipografías y kit).
   respuesta; la UI no lo usa y aplica el estado elegido tras el 200.
 - **Orden de la lista:** el backend ordena por creación descendente; el panel
   reordena por nombre como pide el prompt (todo en cliente).
+
+### Discrepancias del Prompt 8 (cuentas de cliente) frente a `docs/backend/`
+
+- Contradicción resuelta a favor de `docs/backend/CUENTAS_CLIENTE.md`: el login de 6.1 ya no es exclusivo de barberos, sino unificado (`POST /auth/login`). Se añaden Google, completar cuenta y las pantallas de cliente.
+- Contradicción resuelta a favor de `docs/backend/CUENTAS_CLIENTE.md`: la reserva anónima de 6.10 se retiró (`POST /public/barberos/:codigo/citas` responde 410). `/b/:codigo` exige sesión de cliente y reserva con `POST /cliente/barberos/:codigo/citas`; nombre, celular y correo salen del perfil, no del formulario.
