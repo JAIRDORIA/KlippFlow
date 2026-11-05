@@ -1,38 +1,48 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { peticion } from '@/shared/api/client'
 import {
-  CLAVE_SESION_BARBERO,
+  CLAVE_SESION,
   EVENTO_SESION_CERRADA,
+  limpiarSesionLegacy,
   type DetalleSesionCerrada,
 } from '@/shared/api/almacenamientoSesion'
 import { ejecutarAntesDeCerrarSesion } from './antesDeCerrarSesion'
 import { AuthContext } from './auth-context'
 import {
-  borrarSesionBarbero,
-  cargarSesionBarbero,
-  guardarSesionBarbero,
-} from './sesionBarbero'
-import type {
-  CredencialesLogin,
-  RespuestaLoginBarbero,
-  SesionBarbero,
+  actualizarPerfilEnSesion,
+  borrarSesion,
+  cargarSesion,
+  guardarSesion,
+  metodoDeSesion,
+  sesionDesdeRespuesta,
+} from './sesion'
+import {
+  nombreDeSesion,
+  type PerfilCliente,
+  type RegistroPendiente,
+  type RespuestaLogin,
+  type Sesion,
 } from './types'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [sesion, setSesion] = useState<SesionBarbero | null>(() =>
-    cargarSesionBarbero(),
-  )
+  const queryClient = useQueryClient()
+  const [sesion, setSesion] = useState<Sesion | null>(() => {
+    limpiarSesionLegacy()
+    return cargarSesion()
+  })
+  const [registroPendiente, setRegistroPendiente] =
+    useState<RegistroPendiente | null>(null)
 
   useEffect(() => {
     function alCambiarAlmacen(evento: StorageEvent) {
-      if (evento.key === CLAVE_SESION_BARBERO) {
-        setSesion(cargarSesionBarbero())
+      if (evento.key === CLAVE_SESION) {
+        setSesion(cargarSesion())
       }
     }
 
     function alCerrarSesion(evento: Event) {
       const detalle = (evento as CustomEvent<DetalleSesionCerrada>).detail
-      if (detalle?.zona === 'barbero') {
+      if (detalle?.zona === 'barbero' || detalle?.zona === 'cliente') {
         setSesion(null)
       }
     }
@@ -45,45 +55,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(
-    async (credenciales: CredencialesLogin): Promise<SesionBarbero> => {
-      const respuesta = await peticion<RespuestaLoginBarbero>('/auth/login/barbero', {
-        metodo: 'POST',
-        cuerpo: credenciales,
-        zona: 'publico',
-        redirigirEn401: false,
-      })
+  const iniciarSesion = useCallback(
+    (respuesta: RespuestaLogin): Sesion => {
+      // La sesión nueva no puede ver datos de la anterior.
+      queryClient.clear()
 
-      const nombreCompleto =
-        `${respuesta.barbero.nombres} ${respuesta.barbero.apellidos}`.trim()
-
-      const nuevaSesion: SesionBarbero = {
-        accessToken: respuesta.accessToken,
-        nombre: nombreCompleto || respuesta.barbero.username,
-        username: respuesta.barbero.username,
-        nombreBarberia: respuesta.barbero.nombreBarberia ?? null,
-      }
-
-      guardarSesionBarbero(nuevaSesion)
+      const nuevaSesion = sesionDesdeRespuesta(respuesta)
+      guardarSesion(nuevaSesion)
       setSesion(nuevaSesion)
+      setRegistroPendiente(null)
       return nuevaSesion
     },
-    [],
+    [queryClient],
   )
+
+  const guardarRegistroPendiente = useCallback((registro: RegistroPendiente) => {
+    // Solo memoria: no toca storage, URL, caché ni history.state.
+    setRegistroPendiente(registro)
+  }, [])
+
+  const limpiarRegistroPendiente = useCallback(() => {
+    setRegistroPendiente(null)
+  }, [])
+
+  const actualizarPerfil = useCallback((perfil: PerfilCliente) => {
+    setSesion((actual) => {
+      if (!actual || actual.usuario.tipo !== 'cliente') return actual
+      const nueva = actualizarPerfilEnSesion(actual, perfil)
+      guardarSesion(nueva)
+      return nueva
+    })
+  }, [])
 
   const cerrarSesion = useCallback(async (): Promise<void> => {
     await ejecutarAntesDeCerrarSesion()
-    borrarSesionBarbero('manual')
+    queryClient.clear()
+    borrarSesion(sesion?.tipo ?? 'barbero', 'manual')
     setSesion(null)
-  }, [])
+    setRegistroPendiente(null)
+  }, [queryClient, sesion?.tipo])
 
   return (
     <AuthContext.Provider
       value={{
         sesion,
         estaAutenticado: sesion !== null,
-        nombre: sesion?.nombre ?? null,
-        login,
+        tipo: sesion?.tipo ?? null,
+        usuario: sesion?.usuario ?? null,
+        nombre: nombreDeSesion(sesion),
+        metodo: sesion ? metodoDeSesion(sesion.token) : null,
+        registroPendiente,
+        iniciarSesion,
+        guardarRegistroPendiente,
+        limpiarRegistroPendiente,
+        actualizarPerfil,
         cerrarSesion,
       }}
     >

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { detectarDispositivo, esIos, esModoStandalone } from './plataforma'
+import {
+  detectarDispositivo,
+  esIos,
+  esModoStandalone,
+  estadoPermiso,
+  plataformaPush,
+} from './plataforma'
 
 const IPHONE_SAFARI =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -111,5 +117,72 @@ describe('detección de plataforma', () => {
     expect(
       esModoStandalone({ userAgent: IPHONE_SAFARI, standalone: true, matchMedia: () => false }),
     ).toBe(true)
+  })
+})
+
+describe('plataformaPush', () => {
+  it('ofrece instalar en iPhone sin standalone aunque falten APIs', () => {
+    expect(plataformaPush({ userAgent: IPHONE_SAFARI })).toBe('ios-navegador')
+  })
+
+  it('distingue iPhone instalada', () => {
+    expect(
+      plataformaPush({ userAgent: IPHONE_SAFARI, standalone: true, ...CON_PUSH }),
+    ).toBe('ios-instalada')
+  })
+
+  it('distingue iPad con UA de Mac instalada', () => {
+    expect(
+      plataformaPush({
+        userAgent: IPAD_CON_UA_DE_MAC,
+        platform: 'MacIntel',
+        maxTouchPoints: 5,
+        standalone: true,
+        ...CON_PUSH,
+      }),
+    ).toBe('ios-instalada')
+  })
+
+  it('usa android-o-escritorio cuando hay soporte', () => {
+    expect(plataformaPush({ userAgent: ANDROID_CHROME, ...CON_PUSH })).toBe(
+      'android-o-escritorio',
+    )
+    expect(plataformaPush({ userAgent: ESCRITORIO_CHROME, ...CON_PUSH })).toBe(
+      'android-o-escritorio',
+    )
+  })
+
+  it('marca sin-soporte en un entorno no iOS sin APIs', () => {
+    expect(plataformaPush({ userAgent: ANDROID_CHROME })).toBe('sin-soporte')
+    expect(plataformaPush({ userAgent: ESCRITORIO_CHROME })).toBe('sin-soporte')
+  })
+})
+
+describe('estadoPermiso', () => {
+  it('no-soportado si falta Notification', () => {
+    expect(estadoPermiso({ userAgent: ESCRITORIO_CHROME })).toBe('no-soportado')
+  })
+
+  it('respeta granted/denied/default', () => {
+    expect(
+      estadoPermiso({
+        userAgent: ESCRITORIO_CHROME,
+        tieneNotification: true,
+        permiso: 'granted',
+      }),
+    ).toBe('granted')
+    expect(
+      estadoPermiso({
+        userAgent: ESCRITORIO_CHROME,
+        tieneNotification: true,
+        permiso: 'denied',
+      }),
+    ).toBe('denied')
+    expect(
+      estadoPermiso({
+        userAgent: ESCRITORIO_CHROME,
+        tieneNotification: true,
+      }),
+    ).toBe('default')
   })
 })

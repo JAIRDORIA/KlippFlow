@@ -59,8 +59,8 @@ Generado en `dist/manifest.webmanifest` por `vite-plugin-pwa` (config en
 {
   "name": "KlippFlow",
   "short_name": "KlippFlow",
-  "description": "Agenda, caja y avisos para barberos. Tus clientes reservan sin crear cuenta.",
-  "start_url": "/app",
+  "description": "Agenda, caja y avisos para barberos. Tus clientes reservan con su cuenta de cliente.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -160,21 +160,26 @@ zonas, donde no hay providers.
 | `/app/ajustes` | Ajustes · KlippFlow |
 | `/b/:codigo` | Reservar cita · KlippFlow (o `Reservar cita · <barbería> · KlippFlow`) |
 | `/cita/:token` | Tu cita · KlippFlow |
+| `/privacidad` | Política de privacidad de KlippFlow |
 | `/admin`, `/admin/login` | Administración · KlippFlow |
 | cualquier otra | No encontrada · KlippFlow |
 
 `noindex`: todas las rutas privadas (`/app/*`, `/admin/*`, `/login`,
-`/instalar`) y las públicas de reserva y seguimiento (`/b/*`, `/cita/*`). Se
-refuerza con `MetaNoIndex` (una sola decisión en `rutas.ts`) y con
-`public/robots.txt` (`Disallow: /`); en producción se añade
-`X-Robots-Tag: noindex, nofollow`. `index.html` ya trae `noindex, nofollow`
-global.
+`/instalar`), las públicas de reserva y seguimiento (`/b/*`, `/cita/*`) y las
+desconocidas. `/privacidad` es la única ruta indexable. Se refuerza con
+`MetaNoIndex` (una sola decisión en `rutas.ts`) y con `public/robots.txt`
+(`Allow: /privacidad` + `Disallow: /`). Se retiraron el `noindex` global de
+`index.html` y el `X-Robots-Tag` global de `vercel.json` para no bloquear la
+política.
 
 ---
 
 ## 6. Lista de comprobación para iPhone real (PENDIENTE)
 
 No hay despliegue HTTPS todavía, así que **nada de esto está verificado**.
+
+El reingreso en iPhone con la app instalada se resuelve con passkey o con
+usuario y contraseña.
 
 - [ ] Abrir el dominio en Safari (iOS 16.4 o superior) y comprobar que la app
       carga y que el login funciona.
@@ -213,5 +218,5 @@ No hay despliegue HTTPS todavía, así que **nada de esto está verificado**.
   que el usuario decide, para que no se pierda si está trabajando.
 - La frontera de error por zona se reinicia al cambiar de zona; dentro de la
   misma zona, tras un error, hay que usar "Recargar" o "Ir al inicio".
-- `robots.txt` + `X-Robots-Tag` no impiden que alguien con el link vea la
-  página: solo evitan que se indexe.
+- `robots.txt` no impide que alguien con el link vea la página: solo evita que
+  se indexe.

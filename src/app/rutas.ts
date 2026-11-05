@@ -27,7 +27,15 @@ export function zonaDeRuta(pathname: string): Zona {
     return 'barbero'
   }
 
-  if (ruta === '/b' || ruta.startsWith('/b/') || ruta.startsWith('/cita/')) {
+  if (
+    ruta === '/b' ||
+    ruta.startsWith('/b/') ||
+    ruta.startsWith('/cita/') ||
+    ruta === '/mi' ||
+    ruta.startsWith('/mi/') ||
+    ruta === '/registro/completar' ||
+    ruta === '/privacidad'
+  ) {
     return 'publico'
   }
 
@@ -68,6 +76,15 @@ export function tituloDeRuta(
   if (ruta === '/instalar' || ruta === '/app/instalar') return `Instalar · ${SUFIJO}`
   if (ruta === '/dev') return `Kit visual · ${SUFIJO}`
 
+  if (ruta === '/privacidad') return 'Política de privacidad de KlippFlow'
+  if (ruta === '/mi') return `Mi cuenta · ${SUFIJO}`
+  if (ruta === '/mi/instalar') return `Instalar · ${SUFIJO}`
+  if (ruta === '/mi/citas') return `Mis citas · ${SUFIJO}`
+  if (ruta.startsWith('/mi/citas/')) return `Detalle de cita · ${SUFIJO}`
+  if (ruta === '/mi/seguridad') return `Seguridad · ${SUFIJO}`
+  if (ruta === '/mi/nueva-contrasena') return `Nueva contraseña · ${SUFIJO}`
+  if (ruta === '/registro/completar') return `Completa tu cuenta de cliente · ${SUFIJO}`
+
   if (ruta === '/app' || ruta === '/app/hoy') return `Hoy · ${SUFIJO}`
   if (ruta === '/app/solicitudes') return `Solicitudes · ${SUFIJO}`
   if (ruta === '/app/cuentas') return `Cuentas · ${SUFIJO}`
@@ -91,7 +108,14 @@ export function tituloDeRuta(
 }
 
 /** Rutas que exigen sesión o son herramientas internas del barbero/admin. */
-export const PREFIJOS_PRIVADOS = ['/app', '/admin', '/login', '/instalar'] as const
+export const PREFIJOS_PRIVADOS = [
+  '/app',
+  '/admin',
+  '/login',
+  '/instalar',
+  '/mi',
+  '/registro',
+] as const
 
 /**
  * Rutas públicas que tampoco se indexan: no queremos que Google liste a cada
@@ -111,14 +135,16 @@ function coincideAlgunPrefijo(
 /**
  * ¿Esta ruta lleva `<meta name="robots" content="noindex">`?
  *
- * Privadas (`/app/*`, `/admin/*`, login e instalar) y públicas de reserva
- * (`/b/*`, `/cita/*`). Las rutas desconocidas no están aquí, pero el
- * `index.html` ya trae `noindex, nofollow` para toda la app, así que la 404
- * también queda fuera de los buscadores.
+ * Privadas (`/app/*`, `/admin/*`, login e instalar), públicas de reserva
+ * (`/b/*`, `/cita/*`) y rutas desconocidas. `/privacidad` es la única excepción
+ * indexable.
  */
 export function esRutaNoIndex(pathname: string): boolean {
   const ruta = normalizarRuta(pathname)
+  if (ruta === '/privacidad') return false
+
   return (
+    zonaDeRuta(ruta) === 'desconocida' ||
     coincideAlgunPrefijo(ruta, PREFIJOS_PRIVADOS) ||
     coincideAlgunPrefijo(ruta, PREFIJOS_PUBLICOS_NO_INDEXABLES)
   )

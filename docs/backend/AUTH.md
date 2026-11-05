@@ -7,7 +7,11 @@ El `ValidationPipe` global usa `whitelist`, `forbidNonWhitelisted` y `transform`
 
 ---
 
-## POST /auth/login/cliente
+## POST /auth/login/cliente (heredado)
+
+> **Heredado.** Se conserva por compatibilidad, pero el login nuevo es
+> `POST /auth/login` (unificado). Este endpoint solo busca en `clientes` y
+> devuelve `{ accessToken, cliente }`.
 
 Inicia sesión como cliente.
 
@@ -32,10 +36,10 @@ Inicia sesión como cliente.
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "cliente": {
     "id": 1,
-    "nombres": "Admin",
-    "apellidos": "Prueba",
+    "nombre": "Admin",
     "username": "admin",
-    "correoVerificado": true
+    "correo": "admin@example.com",
+    "celular": null
   }
 }
 ```
@@ -151,6 +155,171 @@ mismo `JWT_SECRET`.
 
 ---
 
+## POST /auth/login (unificado — recomendado para barberos y clientes)
+
+Inicia sesión con un **mismo endpoint** para barberos y clientes. El rol sale
+de quién es el usuario: primero busca en `barberos` y luego en `clientes`, por
+username normalizado (minúsculas).
+
+### Request
+
+```json
+{
+  "usuario": "barbero1",
+  "contrasena": "Barbero2026"
+}
+```
+
+| Campo | Tipo | Reglas |
+|---|---|---|
+| `usuario` | string | obligatorio, no vacío |
+| `contrasena` | string | obligatorio, no vacío |
+
+### Respuesta 200 — barbero
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tipo": "barbero",
+  "barbero": {
+    "id": 1,
+    "codigoUnico": "BARB-0001",
+    "nombres": "Barbero",
+    "apellidos": "Prueba",
+    "nombreBarberia": "Barbería Demo",
+    "username": "barbero1",
+    "estadoCuenta": "activo"
+  }
+}
+```
+
+### Respuesta 200 — cliente
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tipo": "cliente",
+  "cliente": {
+    "id": 2,
+    "nombre": "Cliente",
+    "username": "test_cliente",
+    "correo": "cliente@example.com",
+    "celular": "3001112233"
+  }
+}
+```
+
+### Errores
+
+- **401** `Usuario o contraseña incorrectos` si el usuario no existe o la
+  contraseña es incorrecta (mismo mensaje; bcrypt se ejecuta igual con hash
+  dummy si el usuario no existe).
+- **403** si las credenciales son correctas pero el barbero está
+  suspendido/vencido o el cliente desactivado. Se valida **después** de la
+  contraseña.
+- **429** con más de 10 intentos por minuto por IP.
+
+---
+
+## POST /auth/cliente/google
+
+Verifica un `idToken` de Google y, si la identidad ya existe, inicia sesión.
+Si la identidad no existe, **no crea nada**: devuelve un `registroToken` para
+completar la cuenta.
+
+### Request
+
+```json
+{ "idToken": "eyJhbGciOiJSUzI1NiIs..." }
+```
+
+### Respuesta 200 — identidad existente
+
+```json
+{
+  "requiereCompletar": false,
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tipo": "cliente",
+  "cliente": {
+    "id": 2,
+    "nombre": "Cliente Google",
+    "username": "test_google",
+    "correo": "google@example.com",
+    "celular": "3001112233"
+  }
+}
+```
+
+### Respuesta 200 — identidad nueva
+
+```json
+{
+  "requiereCompletar": true,
+  "registroToken": "eyJhbGciOiJIUzI1NiIs...",
+  "perfil": { "nombre": "Cliente Google", "correo": "google@example.com" }
+}
+```
+
+### Errores
+
+- **401** `Token de Google inválido` o `Correo de Google no verificado`
+  (`email_verified !== true`).
+- **503** `Inicio con Google no configurado` si falta `GOOGLE_CLIENT_ID`.
+- **429** con más de 10 intentos por minuto por IP.
+
+La llave de identidad es el `sub` de Google, **nunca** el correo.
+
+---
+
+## POST /auth/cliente/completar-cuenta
+
+Completa la cuenta de un cliente que inició con Google. Crea en **una sola
+transacción** el cliente y su identidad, y devuelve sesión `metodo: 'google'`.
+
+### Request
+
+```json
+{
+  "registroToken": "eyJhbGciOiJIUzI1NiIs...",
+  "username": "test_google",
+  "contrasena": "ClaveSegura123",
+  "celular": "+57 300 111 2233",
+  "nombre": "Cliente Google"
+}
+```
+
+`nombre` es opcional (si no llega se usa el del token). Throttle: **5 por 10
+minutos por IP**.
+
+### Respuesta 201
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tipo": "cliente",
+  "cliente": {
+    "id": 2,
+    "nombre": "Cliente Google",
+    "username": "test_google",
+    "correo": "google@example.com",
+    "celular": "3001112233"
+  }
+}
+```
+
+### Errores
+
+- **400** username reservado/formato inválido, contraseña inválida (8–72 y
+  distinta del username) o celular inválido.
+- **401** `registroToken` inválido o vencido.
+- **409** `Ese usuario ya está en uso` (barbero, admin o cliente) o
+  `Ya existe una cuenta para este Google`.
+- **429** con más de 5 intentos por IP en 10 minutos.
+
+Para probar sin Google real: `node scripts/generar-registro-token.js`.
+
+---
+
 ## JWT
 
 Payload firmado:
@@ -159,12 +328,14 @@ Payload firmado:
 {
   "sub": 1,
   "tipo": "cliente",
-  "username": "admin"
+  "username": "admin",
+  "metodo": "password"
 }
 ```
 
-`tipo` es `'cliente'`, `'barbero'` o `'admin'`. Los endpoints protegidos reciben
-el token con `Authorization: Bearer <accessToken>` y usan
+`tipo` es `'cliente'`, `'barbero'` o `'admin'`. `metodo` es `'password'` o
+`'google'` (barbero y admin siempre `'password'`). Los endpoints protegidos
+reciben el token con `Authorization: Bearer <accessToken>` y usan
 `@UseGuards(JwtAuthGuard)`. Para restringir por rol se usa
 `@UseGuards(JwtAuthGuard, RolesGuard)` junto con `@Roles('barbero')`,
 `@Roles('cliente')` o `@Roles('admin')`.
@@ -173,8 +344,12 @@ el token con `Authorization: Bearer <accessToken>` y usan
 
 - Si `tipo = 'barbero'`: consulta el barbero por PK y exige
   `estado_cuenta = 'activo'`; si no, **403 `Cuenta no activa`**.
+- Si `tipo = 'cliente'`: consulta el cliente por PK y exige que exista y esté
+  `activo`; si no, **401**.
 - Si `tipo = 'admin'`: consulta el admin por PK y exige `activo = 1`; si no,
   **401**.
+- Cualquier otro `tipo` (por ejemplo `registro_cliente`) se rechaza con **401**:
+  un token de registro jamás sirve como token de sesión.
 
 Así una suspensión o desactivación surte efecto de inmediato aunque el token
 siga vigente.

@@ -21,7 +21,17 @@ export interface EntornoDispositivo {
   tieneServiceWorker?: boolean
   tienePushManager?: boolean
   tieneNotification?: boolean
+  /** Simulación de `Notification.permission`. */
+  permiso?: 'default' | 'granted' | 'denied'
 }
+
+export type PlataformaPush =
+  | 'ios-navegador'
+  | 'ios-instalada'
+  | 'android-o-escritorio'
+  | 'sin-soporte'
+
+export type EstadoPermiso = 'default' | 'granted' | 'denied' | 'no-soportado'
 
 export interface DeteccionDispositivo {
   plataforma: Plataforma
@@ -58,6 +68,26 @@ export function detectarDispositivo(
   }
 }
 
+export function plataformaPush(
+  entorno: EntornoDispositivo = leerEntornoDispositivo(),
+): PlataformaPush {
+  const deteccion = detectarDispositivo(entorno)
+
+  // En iPhone/iPad sin instalar se ofrece instalar aunque el navegador aún no
+  // exponga PushManager: el onboarding es el paso previo.
+  if (deteccion.plataforma === 'ios' && !deteccion.standalone) return 'ios-navegador'
+  if (!deteccion.soportePush) return 'sin-soporte'
+  if (deteccion.plataforma === 'ios') return 'ios-instalada'
+  return 'android-o-escritorio'
+}
+
+export function estadoPermiso(
+  entorno: EntornoDispositivo = leerEntornoDispositivo(),
+): EstadoPermiso {
+  if (entorno.tieneNotification !== true) return 'no-soportado'
+  return entorno.permiso ?? 'default'
+}
+
 /** Entorno real del navegador. Es el único punto que toca `navigator`/`window`. */
 export function leerEntornoDispositivo(): EntornoDispositivo {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
@@ -75,6 +105,8 @@ export function leerEntornoDispositivo(): EntornoDispositivo {
     tieneServiceWorker: 'serviceWorker' in navigator,
     tienePushManager: 'PushManager' in window,
     tieneNotification: 'Notification' in window,
+    permiso:
+      typeof Notification === 'undefined' ? 'default' : Notification.permission,
   }
 }
 

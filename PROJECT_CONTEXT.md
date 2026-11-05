@@ -120,7 +120,7 @@ Completado:
 - Pulido de PWA (Prompt 8):
   - Logo real (`public/icons/logo-512.png`) en un componente único `Logo`
     (sm/md/lg) sobre baldosa hueso; fuera el placeholder y su código muerto.
-  - Manifest definitivo (`start_url: /app`, íconos `any` y `maskable`
+  - Manifest definitivo (`start_url: /`, íconos `any` y `maskable`
     separados) y `index.html` con favicons, `apple-touch-icon` y metas de iOS.
   - Actualización del service worker en modo `prompt`: banda "Hay una versión
     nueva" con "Actualizar"/"Ahora no", sin recargas automáticas, y
@@ -128,7 +128,7 @@ Completado:
   - 404 con logo y botón según la sesión, `ErrorBoundary` global y por zona, y
     aviso "Sin conexión".
   - Título del documento por ruta (`useTituloPagina` + `rutas.ts`), `noindex`
-    centralizado, `robots.txt` y `X-Robots-Tag`.
+    centralizado y `robots.txt` con excepción para `/privacidad`.
   - `vercel.json` (rewrites, caché y cabeceras de seguridad) y `.env.example`
     con las variables `VITE_`.
   - `docs/PWA.md` y `docs/DESPLIEGUE_FRONTEND.md`.
@@ -265,23 +265,29 @@ src/
 
 | Ruta | Zona | Estado |
 |---|---|---|
-| `/` | — | Redirige a `/app/hoy` o `/login`. |
-| `/login` | barbero | Real. |
+| `/` | — | Redirige a `/mi` (cliente), `/app` (barbero) o `/login` (sin sesión). |
+| `/login` | público | Real: formulario unificado, Google y recuperación. |
 | `/instalar` | barbero | Real: pasos de instalación y activación de notificaciones (`/app/instalar` redirige aquí). |
 | `/app/hoy` | barbero | Real: contadores, agenda, próximas acciones y horarios libres. |
 | `/app/solicitudes` | barbero | Real: orden por urgencia, cuenta regresiva y aceptar/rechazar. |
 | `/app/cuentas` | barbero | Real: tarjeta financiera, gráfico de 30 días y lista de días. |
 | `/app/compras` | barbero | Real: formulario, lista de hoy y sheet de edición. |
 | `/app/ajustes` | barbero | Real: link, servicios, horarios y cerrar sesión. |
+| `/mi` | cliente | Real: inicio con citas próximas, barberos, aviso de app y menú de cuenta. |
+| `/mi/citas` | cliente | Real: listado completo de citas. |
+| `/mi/citas/:id` | cliente | Real: detalle con servicios por persona. |
+| `/mi/instalar` | cliente | Real: instalación y activación de notificaciones del cliente. |
+| `/mi/nueva-contrasena` | cliente | Real: cambio de contraseña. |
 | `/b` | público | Real; pide el código sin consultar la API. |
-| `/b/:codigo` | público | Real; disponibilidad y creación de cita. |
+| `/b/:codigo` | según sesión | Real; el cliente reserva, el barbero ve el aviso de cambiar de cuenta. |
 | `/cita/:token` | público | Real; seguimiento con polling 30 s. |
+| `/privacidad` | público | Real; política de privacidad indexable. |
 | `/admin/login` | admin | Real: login del panel. |
 | `/admin` | admin | Real: lista, alta y detalle en sheets. |
 | `/dev` | desarrollo | Kit visual; en producción muestra 404. |
 
 Las zonas se cargan con `React.lazy`: público, barbero y admin van en chunks
-separados. `/app/*` exige sesión de barbero.
+separados. `/app/*` exige sesión de barbero y `/mi/*` exige sesión de cliente.
 
 ## 6. Convenciones obligatorias
 
@@ -320,6 +326,10 @@ separados. `/app/*` exige sesión de barbero.
 
 ## 7. Autenticación
 
+- **Frontend A (cliente):** login unificado, Google, completar cuenta, `/mi`, `/mi/nueva-contrasena` y reserva con sesión; ranura única `klippflow.sesion` con `{ token, tipo, usuario }` y admin separado; ver `docs/CUENTAS_CLIENTE_FRONT.md`.
+- **Frontend B (cliente):** `/mi` completo, `/mi/citas`, `/mi/citas/:id`, `/mi/instalar`, push de cliente y confirmación de reserva con aviso de notificaciones; ver `docs/CUENTAS_CLIENTE_FRONT.md` y `docs/NOTIFICACIONES.md`.
+- **Frontend C (passkeys de cliente):** crear, entrar y borrar passkeys desde `/login` y `/mi/seguridad`; la marca `kf_passkey`, el desafío en memoria y la regla de `contrasenaActual` están en `docs/PASSKEYS_FRONT.md`.
+- **Privacidad:** `/privacidad` pública e indexable, enlaces en login/registro/reserva/mi y autorización obligatoria al completar la cuenta; ver `docs/PRIVACIDAD.md`.
 - Login: `POST /auth/login/barbero` con `{ username, password }`.
 - Respuesta: `{ accessToken, barbero: { id, codigoUnico, nombres, apellidos,
   nombreBarberia, username, estadoCuenta } }`.
@@ -547,8 +557,8 @@ separados. `/app/*` exige sesión de barbero.
   respuesta, así que la UI aplica el estado elegido e invalida la lista.
 - **Detalle en sheet:** el prompt define el detalle como sheet; la ruta
   `/admin/barberos/:id` del marcador del prompt 1 ya no existe.
-- **`noindex`:** `index.html` ya lo trae para toda la app y `MetaNoIndex` lo
-  garantiza en las rutas `/admin`.
+- **`noindex`:** `MetaNoIndex` lo añade en rutas privadas, reservas y 404;
+  `/privacidad` queda indexable y `robots.txt` permite solo esa ruta.
 
 ### Decisiones del Prompt 8 (pulido de PWA)
 
@@ -574,8 +584,9 @@ separados. `/app/*` exige sesión de barbero.
 - **Título en el layout, no en cada página:** `AppLayout` y `AdminLayout` ponen
   el título de todas sus rutas hijas (incluida la 404 interna, que el mapeo
   resuelve por ruta); así no hay dos hooks peleándose por `document.title`.
-- **`X-Robots-Tag` además de `robots.txt`:** es la cabecera que "permite la
-  herramienta" (Vercel) para el mismo `noindex`.
+- **Indexación:** se retiró el `X-Robots-Tag` global para que `/privacidad`
+  pueda indexarse; `robots.txt` permite solo esa ruta y `MetaNoIndex` cubre el
+  resto.
 - **Sin CSP:** no se añade hasta que se pida (regla del prompt).
 
 ### Decisiones del Prompt 9 (logo y badge)
@@ -628,7 +639,7 @@ Comprobado en este prompt:
   `SKIP_WAITING`.
 - El CSS de producción ya no contiene la regla de padding porcentual de la
   baldosa del logo.
-- Manifest comprobado en `dist`: `start_url: /app`, `scope: /`,
+- Manifest comprobado en `dist`: `start_url: /`, `scope: /`,
   `display: standalone`, `lang: es-CO`, íconos 192 y 512 `any` más el
   `maskable` en una entrada aparte.
 - Sin hex fuera de `tokens.css` (solo el theme-color del manifest y de

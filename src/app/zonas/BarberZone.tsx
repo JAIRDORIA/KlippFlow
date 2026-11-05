@@ -15,7 +15,7 @@ export default function BarberZone() {
   return (
     <>
       {/* Re-sincroniza el push al entrar y lo da de baja al cerrar sesión. */}
-      <SincronizadorNotificaciones />
+      <SincronizadorNotificaciones rol="barbero" />
 
       <Routes>
         <Route path="login" element={<LoginPage />} />

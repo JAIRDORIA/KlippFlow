@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { RUTA_SOLICITUDES, urlDestinoSegura } from './urlDestino'
+import {
+  RUTA_CLIENTE,
+  RUTA_SOLICITUDES,
+  urlDestinoCliente,
+  urlDestinoSegura,
+} from './urlDestino'
 
 const ORIGEN = 'https://app.klippflow.test'
 
@@ -40,5 +45,22 @@ describe('urlDestinoSegura', () => {
 
   it('cae al destino por defecto con un origen inválido', () => {
     expect(urlDestinoSegura('/app/hoy', 'no-es-origen')).toBe(RUTA_SOLICITUDES)
+  })
+})
+
+describe('urlDestinoCliente', () => {
+  it('acepta las rutas internas del cliente', () => {
+    expect(urlDestinoCliente('/mi/citas/42')).toBe('/mi/citas/42')
+    expect(urlDestinoCliente('/mi')).toBe('/mi')
+    expect(urlDestinoCliente('/b/BARB-0001')).toBe('/b/BARB-0001')
+    expect(urlDestinoCliente('/cita/token-1')).toBe('/cita/token-1')
+  })
+
+  it('cae en /mi para rutas externas o ajenas', () => {
+    expect(urlDestinoCliente('https://evil.test/mi/citas/42')).toBe(RUTA_CLIENTE)
+    expect(urlDestinoCliente('//evil.test/mi')).toBe(RUTA_CLIENTE)
+    expect(urlDestinoCliente('/app/hoy')).toBe(RUTA_CLIENTE)
+    expect(urlDestinoCliente(undefined)).toBe(RUTA_CLIENTE)
+    expect(urlDestinoCliente('')).toBe(RUTA_CLIENTE)
   })
 })

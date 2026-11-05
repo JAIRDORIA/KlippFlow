@@ -4,10 +4,9 @@ import { esRutaNoIndex } from './rutas'
 
 /**
  * Garantiza `<meta name="robots" content="noindex">` en las rutas que no deben
- * indexarse (privadas y reservas públicas). La decisión vive en `rutas.ts`.
+ * indexarse (privadas, reservas públicas y 404). La decisión vive en `rutas.ts`.
  *
- * `index.html` ya trae `noindex, nofollow` para toda la app; este componente lo
- * refuerza por ruta y lo restaura al desmontarse.
+ * `/privacidad` es la excepción indexable; no recibe este meta.
  */
 export function MetaNoIndex() {
   const { pathname } = useLocation()

@@ -1,4 +1,5 @@
-# KlippFlow no se indexa: ni el panel, ni la agenda, ni las reservas de cada
-# barbero. La copia en producción también envía X-Robots-Tag (ver vercel.json).
+# KlippFlow solo permite indexar la política de privacidad. El resto de la app
+# (panel, agenda, reservas, cuentas) queda fuera de los buscadores.
 User-agent: *
+Allow: /privacidad
 Disallow: /

@@ -1,13 +1,34 @@
-import { ArrowRight, Plus } from 'lucide-react'
-import { useMemo, useReducer, useState, type FormEvent } from 'react'
+import { ArrowRight, Check, Plus } from 'lucide-react'
+import {
+  useCallback,
+  useMemo,
+  useReducer,
+  useState,
+  type FormEvent,
+} from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTituloPagina } from '@/app/useTituloPagina'
+import type { UsuarioSesionCliente } from '@/features/auth/types'
+import { useAuth } from '@/features/auth/useAuth'
+import {
+  mapearErrorCreacionCliente,
+  mapearErrorPerfil,
+} from '@/features/cuentas-cliente/domain/errores'
+import { validarPerfilCliente } from '@/features/cuentas-cliente/domain/validadores'
+import { AvisoActivarApp } from '@/features/cuentas-cliente/components/AvisoActivarApp'
+import { EnlacePrivacidad } from '@/features/legal/components/EnlacePrivacidad'
+import {
+  useActualizarPerfil,
+  useCrearCitaCliente,
+} from '@/features/cuentas-cliente/hooks'
 import { Button } from '@/shared/ui/Button'
+import { Card } from '@/shared/ui/Card'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Input } from '@/shared/ui/Input'
 import { Logo } from '@/shared/ui/Logo'
 import { Money } from '@/shared/ui/Money'
 import { Segmented } from '@/shared/ui/Segmented'
+import { Sheet } from '@/shared/ui/Sheet'
 import { Skeleton } from '@/shared/ui/Skeleton'
 import { guardarCitaCliente } from './almacenamientoCitas'
 import { DiaSelector } from './components/DiaSelector'
@@ -18,30 +39,33 @@ import {
   calcularTotales,
   esDuracionValida,
   esError404,
-  esFormularioValido,
   generarDiasDisponibles,
   horaSigueDisponible,
-  mapearErrorCreacion,
   MAXIMO_PERSONAS,
   puedeAgregarAcompanante,
   reducerFormularioReserva,
   seleccionParaTotales,
-  validarDatos,
 } from './domain'
-import type {
-  AccionFormularioReserva,
-  CampoDatos,
+import type { AccionFormularioReserva } from './domain/formulario'
+import {
+  construirCuerpoCitaCliente,
+  crearEstadoInicial,
+  esFormularioClienteValido,
 } from './domain/formulario'
 import {
   useBarberoPublico,
   useCitaActiva,
-  useCrearCita,
   useDisponibilidad,
 } from './hooks'
 import { hoyBogota } from '@/shared/lib/fechas'
-import type { BarberoPublico } from './types'
-import { construirCuerpoCrearCita, crearEstadoInicial } from './domain/formulario'
+import type { BarberoPublico, CitaCreada } from './types'
 import { useDebouncedValue } from './useDebouncedValue'
+
+function tituloDeBarbero(barbero: BarberoPublico): string {
+  return barbero.nombreBarberia
+    ? `${barbero.nombres} · ${barbero.nombreBarberia}`
+    : barbero.nombres
+}
 
 function ReservaPage() {
   const { codigo: parametro = '' } = useParams()
@@ -55,6 +79,7 @@ function ContenidoReserva({ codigo }: { codigo: string }) {
   useTituloPagina({
     barberia: consulta.data?.nombreBarberia ?? consulta.data?.nombres ?? null,
   })
+  const { sesion, cerrarSesion } = useAuth()
 
   if (consulta.isPending) return <ReservaCargando />
 
@@ -68,7 +93,130 @@ function ContenidoReserva({ codigo }: { codigo: string }) {
     )
   }
 
-  return <FormularioReserva codigo={codigo} barbero={consulta.data} />
+  if (!sesion) {
+    return <ReservaSinSesion codigo={codigo} barbero={consulta.data} />
+  }
+
+  if (sesion.usuario.tipo === 'barbero') {
+    return (
+      <ReservaSesionBarbero
+        barbero={consulta.data}
+        onCerrarSesion={cerrarSesion}
+      />
+    )
+  }
+
+  return (
+    <FormularioReserva
+      codigo={codigo}
+      barbero={consulta.data}
+      cliente={sesion.usuario}
+    />
+  )
+}
+
+function EncabezadoPublico({
+  barbero,
+  subtitulo,
+}: {
+  barbero: BarberoPublico
+  subtitulo: string
+}) {
+  return (
+    <header className="flex flex-col gap-4">
+      <Logo tamano="sm" />
+      <div>
+        <h1 className="type-public-title break-words">
+          {tituloDeBarbero(barbero)}
+        </h1>
+        <p className="type-form mt-4 text-secondary">{subtitulo}</p>
+      </div>
+    </header>
+  )
+}
+
+function ReservaSinSesion({
+  codigo,
+  barbero,
+}: {
+  codigo: string
+  barbero: BarberoPublico
+}) {
+  const volver = `/b/${encodeURIComponent(codigo)}`
+
+  return (
+    <main className="screen flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
+      <div className="mx-auto flex w-full max-w-[520px] flex-col gap-10">
+        <EncabezadoPublico
+          barbero={barbero}
+          subtitulo="Reserva tu cita en menos de un minuto."
+        />
+
+        <Card className="flex flex-col gap-5">
+          <p className="type-form text-secondary">
+            Inicia sesión o crea tu cuenta de cliente para reservar
+          </p>
+          <Link
+            to={`/login?volver=${encodeURIComponent(volver)}`}
+            className="inline-flex min-h-[var(--height-button)] w-full items-center justify-center rounded-[var(--radius-button)] bg-accent px-[var(--padding-button-x)] text-[var(--font-size-form)] font-semibold text-ink transition-colors hover:bg-white"
+          >
+            Iniciar sesión o crear cuenta de cliente
+          </Link>
+        </Card>
+      </div>
+      <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+        <EnlacePrivacidad />
+      </footer>
+    </main>
+  )
+}
+
+function ReservaSesionBarbero({
+  barbero,
+  onCerrarSesion,
+}: {
+  barbero: BarberoPublico
+  onCerrarSesion: () => Promise<void>
+}) {
+  return (
+    <main className="screen flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
+      <div className="mx-auto flex w-full max-w-[520px] flex-col gap-10">
+        <EncabezadoPublico
+          barbero={barbero}
+          subtitulo="Reserva tu cita en menos de un minuto."
+        />
+
+        <Card className="flex flex-col gap-5">
+          <p className="type-form text-secondary">
+            Estás con tu sesión de barbero. Cierra sesión para reservar como
+            cliente.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              to="/app"
+              className="inline-flex min-h-[var(--height-button)] items-center justify-center rounded-[var(--radius-button)] border border-line px-[var(--padding-button-x)] text-[var(--font-size-form)] font-semibold text-text transition-colors hover:bg-white-5"
+            >
+              Ir a mi panel
+            </Link>
+            <Button
+              variante="ghost"
+              className="w-full"
+              onClick={() => void onCerrarSesion()}
+            >
+              Cerrar sesión
+            </Button>
+          </div>
+          <p className="type-helper">
+            Después de cerrar sesión podrás entrar con tu cuenta de cliente y
+            reservar en esta misma barbería.
+          </p>
+        </Card>
+      </div>
+      <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+        <EnlacePrivacidad />
+      </footer>
+    </main>
+  )
 }
 
 function ReservaCargando() {
@@ -130,14 +278,54 @@ function ErrorCarga({
   )
 }
 
+function ConfirmacionCita({
+  cita,
+  clienteId,
+}: {
+  cita: CitaCreada
+  clienteId: number
+}) {
+  const navegar = useNavigate()
+
+  return (
+    <main className="screen flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
+      <div className="mx-auto flex w-full max-w-[520px] flex-col items-center text-center">
+        <Logo tamano="sm" />
+        <span className="mt-10 inline-flex size-[var(--size-avatar)] items-center justify-center rounded-full border border-green-40 bg-green-10 text-green">
+          <Check aria-hidden="true" size={26} strokeWidth={1.6} />
+        </span>
+        <h1 className="type-public-title mt-6">Cita creada</h1>
+        <p className="type-form mt-4 max-w-[360px] text-secondary">
+          {cita.mensaje}
+        </p>
+        <p className="type-small mt-3 text-amber">
+          Espera a que el barbero acepte tu solicitud
+        </p>
+
+        <div className="mt-8 w-full text-left">
+          <AvisoActivarApp contexto="confirmacion" clienteId={clienteId} />
+        </div>
+
+        <Button className="mt-6 w-full max-w-[320px]" onClick={() => navegar('/mi')}>
+          Ir a mis citas
+        </Button>
+      </div>
+      <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+        <EnlacePrivacidad />
+      </footer>
+    </main>
+  )
+}
+
 function FormularioReserva({
   codigo,
   barbero,
+  cliente,
 }: {
   codigo: string
   barbero: BarberoPublico
+  cliente: UsuarioSesionCliente
 }) {
-  const navegar = useNavigate()
   const dias = useMemo(() => generarDiasDisponibles(), [])
   const fechaInicial = dias[0]?.fecha ?? ''
   const [form, dispatch] = useReducer(
@@ -145,18 +333,32 @@ function FormularioReserva({
     fechaInicial,
     crearEstadoInicial,
   )
-  const [tocados, setTocados] = useState({
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
+  const [citaCreada, setCitaCreada] = useState<CitaCreada | null>(null)
+  const [sheetAbierto, setSheetAbierto] = useState(false)
+  const [nombrePerfil, setNombrePerfil] = useState(cliente.nombre)
+  const [celularPerfil, setCelularPerfil] = useState(cliente.celular)
+  const [tocadosPerfil, setTocadosPerfil] = useState({
     nombre: false,
     celular: false,
-    correo: false,
   })
-  const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
-  const mutacion = useCrearCita(codigo)
+  const [errorPerfil, setErrorPerfil] = useState<string | null>(null)
+
+  const mutacion = useCrearCitaCliente(codigo)
+  const mutacionPerfil = useActualizarPerfil()
   // Aviso validado contra el servidor: desaparece cuando la cita ya terminó.
   const citaActiva = useCitaActiva(codigo, hoyBogota())
 
+  const cerrarSheet = useCallback(() => setSheetAbierto(false), [])
+  const abrirSheet = useCallback(() => {
+    setNombrePerfil(cliente.nombre)
+    setCelularPerfil(cliente.celular)
+    setTocadosPerfil({ nombre: false, celular: false })
+    setErrorPerfil(null)
+    setSheetAbierto(true)
+  }, [cliente.nombre, cliente.celular])
+
   const totales = calcularTotales(seleccionParaTotales(form), barbero.servicios)
-  const errores = validarDatos(form.datos)
   const hayServiciosTitular = form.serviciosTitular.length > 0
   const duracionValida = esDuracionValida(totales.duracionMinutos)
 
@@ -177,33 +379,27 @@ function FormularioReserva({
   const horaEfectiva = horaSigueDisponible(slots, form.horaInicio)
     ? form.horaInicio
     : null
-  const formularioValido = esFormularioValido(
+  const formularioValido = esFormularioClienteValido(
     { ...form, horaInicio: horaEfectiva },
     barbero.servicios,
   )
 
-  const titulo = barbero.nombreBarberia
-    ? `${barbero.nombres} · ${barbero.nombreBarberia}`
-    : barbero.nombres
+  const erroresPerfil = validarPerfilCliente({
+    nombre: nombrePerfil,
+    celular: celularPerfil,
+  })
+  const perfilValido = !erroresPerfil.nombre && !erroresPerfil.celular
 
   function despachar(accion: AccionFormularioReserva) {
     setErrorEnvio(null)
     dispatch(accion)
   }
 
-  function cambiarDato(campo: CampoDatos, valor: string) {
-    despachar({ tipo: 'cambiar-dato', campo, valor })
-  }
-
-  function marcarTocado(campo: keyof typeof tocados) {
-    setTocados((actual) => ({ ...actual, [campo]: true }))
-  }
-
   function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     if (!formularioValido || !horaEfectiva || mutacion.isPending) return
 
-    const cuerpo = construirCuerpoCrearCita(
+    const cuerpo = construirCuerpoCitaCliente(
       { ...form, horaInicio: horaEfectiva },
       barbero.servicios,
     )
@@ -217,10 +413,10 @@ function FormularioReserva({
           codigo,
           creadoEn: new Date().toISOString(),
         })
-        navegar(`/cita/${cita.token}`)
+        setCitaCreada(cita)
       },
       onError: (error) => {
-        const mapeado = mapearErrorCreacion(error)
+        const mapeado = mapearErrorCreacionCliente(error)
         if (mapeado.descartarHora) {
           dispatch({ tipo: 'seleccionar-hora', horaInicio: null })
         }
@@ -232,20 +428,31 @@ function FormularioReserva({
     })
   }
 
+  function guardarPerfil() {
+    if (!perfilValido || mutacionPerfil.isPending) return
+    setErrorPerfil(null)
+    mutacionPerfil.mutate(
+      { nombre: nombrePerfil.trim(), celular: celularPerfil },
+      {
+        onSuccess: () => setSheetAbierto(false),
+        onError: (fallo) => setErrorPerfil(mapearErrorPerfil(fallo)),
+      },
+    )
+  }
+
+  if (citaCreada) {
+    return <ConfirmacionCita cita={citaCreada} clienteId={cliente.id} />
+  }
+
   return (
     <main className="flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
       <form onSubmit={enviar} className="flex flex-1 flex-col" noValidate>
         <div className="screen flex-1">
           <div className="mx-auto flex w-full max-w-[520px] flex-col gap-10">
-            <header className="flex flex-col gap-4">
-              <Logo tamano="sm" />
-              <div>
-                <h1 className="type-public-title break-words">{titulo}</h1>
-                <p className="type-form mt-4 text-secondary">
-                  Reserva tu cita en menos de un minuto. Sin crear cuenta.
-                </p>
-              </div>
-            </header>
+            <EncabezadoPublico
+              barbero={barbero}
+              subtitulo="Reserva tu cita en menos de un minuto."
+            />
 
             {citaActiva && (
               <Link
@@ -261,6 +468,23 @@ function FormularioReserva({
                 <ArrowRight aria-hidden="true" size={16} strokeWidth={1.6} />
               </Link>
             )}
+
+            <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line bg-card px-4 py-3">
+              <p className="type-small min-w-0">
+                Reservarás como{' '}
+                <span className="font-medium text-text">{cliente.nombre}</span>{' '}
+                <span aria-hidden="true">·</span>{' '}
+                <span className="font-mono text-text">{cliente.celular}</span>
+              </p>
+              <Button
+                variante="ghost"
+                tamano="compacto"
+                className="shrink-0"
+                onClick={abrirSheet}
+              >
+                Cambiar
+              </Button>
+            </div>
 
             {!barbero.reservasDisponibles ? (
               <p
@@ -442,51 +666,6 @@ function FormularioReserva({
                   )}
                 </section>
 
-                <section aria-labelledby="paso-datos" className="flex flex-col gap-4">
-                  <h2 id="paso-datos" className="type-eyebrow">
-                    4 · TUS DATOS
-                  </h2>
-
-                  <Input
-                    etiqueta="Nombre"
-                    name="nombre"
-                    value={form.datos.nombre}
-                    onChange={(evento) => cambiarDato('nombre', evento.target.value)}
-                    onBlur={() => marcarTocado('nombre')}
-                    error={tocados.nombre ? errores.nombre : undefined}
-                    autoComplete="name"
-                    maxLength={100}
-                    placeholder="Tu nombre"
-                  />
-                  <Input
-                    etiqueta="Celular"
-                    name="celular"
-                    value={form.datos.celular}
-                    onChange={(evento) => cambiarDato('celular', evento.target.value)}
-                    onBlur={() => marcarTocado('celular')}
-                    error={tocados.celular ? errores.celular : undefined}
-                    ayuda="Ejemplo 3001234567. Puedes escribir +57 y espacios."
-                    inputMode="tel"
-                    autoComplete="tel"
-                    maxLength={20}
-                    placeholder="3001234567"
-                  />
-                  <Input
-                    etiqueta="Correo (opcional)"
-                    name="correo"
-                    type="email"
-                    value={form.datos.correo}
-                    onChange={(evento) => cambiarDato('correo', evento.target.value)}
-                    onBlur={() => marcarTocado('correo')}
-                    error={tocados.correo ? errores.correo : undefined}
-                    ayuda="Opcional. Si lo escribes, debe ser válido."
-                    inputMode="email"
-                    autoComplete="email"
-                    maxLength={150}
-                    placeholder="tu@correo.com"
-                  />
-                </section>
-
                 {errorEnvio && (
                   <p
                     role="alert"
@@ -520,10 +699,84 @@ function FormularioReserva({
               <p className="type-helper text-center">
                 Sin pago en línea. El barbero aceptará o rechazará tu solicitud.
               </p>
+              <EnlacePrivacidad className="self-center" />
             </div>
           </footer>
         )}
       </form>
+
+      {!barbero.reservasDisponibles && (
+        <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+          <EnlacePrivacidad />
+        </footer>
+      )}
+
+      <Sheet
+        abierto={sheetAbierto}
+        onCerrar={cerrarSheet}
+        titulo="Cambiar datos"
+        descripcion="Actualiza tu nombre y celular para esta y tus próximas reservas."
+        pie={
+          <Button
+            className="w-full"
+            onClick={guardarPerfil}
+            disabled={!perfilValido || mutacionPerfil.isPending}
+            cargando={mutacionPerfil.isPending}
+          >
+            Guardar
+          </Button>
+        }
+      >
+        <div className="flex flex-col gap-5">
+          <Input
+            etiqueta="Nombre"
+            name="perfil-nombre"
+            value={nombrePerfil}
+            onChange={(evento) => {
+              setNombrePerfil(evento.target.value)
+              setErrorPerfil(null)
+            }}
+            onBlur={() => setTocadosPerfil((actual) => ({ ...actual, nombre: true }))}
+            error={
+              tocadosPerfil.nombre || nombrePerfil.length > 0
+                ? erroresPerfil.nombre
+                : undefined
+            }
+            autoComplete="name"
+            maxLength={100}
+            placeholder="Tu nombre"
+          />
+          <Input
+            etiqueta="Celular"
+            name="perfil-celular"
+            value={celularPerfil}
+            onChange={(evento) => {
+              setCelularPerfil(evento.target.value)
+              setErrorPerfil(null)
+            }}
+            onBlur={() => setTocadosPerfil((actual) => ({ ...actual, celular: true }))}
+            error={
+              tocadosPerfil.celular || celularPerfil.length > 0
+                ? erroresPerfil.celular
+                : undefined
+            }
+            ayuda="Ejemplo 3001234567. Puedes escribir +57 y espacios."
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={20}
+            placeholder="3001234567"
+          />
+
+          {errorPerfil && (
+            <p
+              role="alert"
+              className="type-small rounded-[var(--radius-warning)] border border-red-30 bg-red-10 p-[var(--space-warning)] text-red"
+            >
+              {errorPerfil}
+            </p>
+          )}
+        </div>
+      </Sheet>
     </main>
   )
 }

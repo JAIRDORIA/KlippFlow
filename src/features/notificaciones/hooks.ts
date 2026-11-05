@@ -16,6 +16,7 @@ import { claveVapidABytes } from './domain/vapid'
 import type {
   EstadoNotificaciones,
   PermisoNotificaciones,
+  ZonaPush,
 } from './types'
 
 export interface UseNotificaciones {
@@ -50,7 +51,9 @@ function calcularEstadoBase(
  *
  * El permiso **solo** se pide dentro de `activar()`, que se ata a un clic.
  */
-export function useNotificaciones(): UseNotificaciones {
+export function useNotificaciones(
+  zona: ZonaPush = 'barbero',
+): UseNotificaciones {
   const { mostrarToast } = useToast()
   const deteccion = useMemo(() => detectarDispositivo(leerEntornoDispositivo()), [])
 
@@ -127,8 +130,8 @@ export function useNotificaciones(): UseNotificaciones {
 
       setEstado('activando')
 
-      const llave = await obtenerLlavePublica()
-      const bytes = claveVapidABytes(llave.publicKey)
+      const llave = await obtenerLlavePublica(zona)
+      const bytes = claveVapidABytes(llave)
       if (!bytes) {
         throw new ErrorNotificaciones(
           'suscripcion',
@@ -148,7 +151,7 @@ export function useNotificaciones(): UseNotificaciones {
       const cuerpo = clavesDeSuscripcion(suscripcion)
       if (!cuerpo) throw new ErrorNotificaciones('suscripcion')
 
-      await suscribirPush(cuerpo)
+      await suscribirPush(cuerpo, zona)
 
       setEstado('activo')
       mostrarToast({ mensaje: 'Notificaciones activadas', duracionMs: 4000 })
@@ -160,7 +163,7 @@ export function useNotificaciones(): UseNotificaciones {
       enCurso.current = false
       setOcupado(false)
     }
-  }, [deteccion, mostrarToast])
+  }, [deteccion, mostrarToast, zona])
 
   const desactivar = useCallback(async (): Promise<void> => {
     if (enCurso.current) return
@@ -177,7 +180,7 @@ export function useNotificaciones(): UseNotificaciones {
 
       if (suscripcion) {
         try {
-          await cancelarPush(suscripcion.endpoint)
+          await cancelarPush(suscripcion.endpoint, zona)
         } catch (fallo) {
           // 404: ya no existía en el backend, se sigue con la baja local.
           if (!(fallo instanceof ErrorPeticion) || fallo.status !== 404) throw fallo
@@ -195,7 +198,7 @@ export function useNotificaciones(): UseNotificaciones {
       enCurso.current = false
       setOcupado(false)
     }
-  }, [deteccion, mostrarToast])
+  }, [deteccion, mostrarToast, zona])
 
   const reintentar = useCallback((): void => {
     setError(null)

@@ -1,3 +1,4 @@
+import { volverSeguro } from '@/shared/lib/rutas'
 import {
   cerrarSesionLocal,
   leerToken,
@@ -84,13 +85,28 @@ function normalizarError(status: number, cuerpo: unknown): ErrorPeticion {
   return new ErrorPeticion({ status, mensaje: MENSAJE_GENERICO })
 }
 
+export function construirDestinoLogin(
+  zona: Exclude<ZonaApi, 'publico'>,
+  motivo: string,
+  rutaActual: string,
+): string {
+  const destino = zona === 'admin' ? '/admin/login' : '/login'
+  const parametros = new URLSearchParams({ motivo })
+  if (zona !== 'admin') {
+    const volver = volverSeguro(rutaActual)
+    if (volver) parametros.set('volver', volver)
+  }
+  return `${destino}?${parametros.toString()}`
+}
+
 function redirigirAlLogin(zona: Exclude<ZonaApi, 'publico'>, motivo: string): void {
   if (typeof window === 'undefined') return
 
   const destino = zona === 'admin' ? '/admin/login' : '/login'
   if (window.location.pathname === destino) return
 
-  window.location.assign(`${destino}?motivo=${encodeURIComponent(motivo)}`)
+  const rutaActual = `${window.location.pathname}${window.location.search}`
+  window.location.assign(construirDestinoLogin(zona, motivo, rutaActual))
 }
 
 function esCuentaNoActiva(mensaje: string): boolean {

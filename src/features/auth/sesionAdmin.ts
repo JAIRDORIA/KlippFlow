@@ -2,7 +2,7 @@ import {
   CLAVE_SESION_ADMIN,
   cerrarSesionLocal,
 } from '@/shared/api/almacenamientoSesion'
-import { tokenVigente } from './sesionBarbero'
+import { tokenVigente } from './sesion'
 import type { SesionAdmin } from './types'
 
 /**
