@@ -12,8 +12,10 @@ import { peticion } from '@/shared/api/client'
 import type {
   BarberoCliente,
   CitaCliente,
+  CitaClienteDetalle,
   CrearCitaClienteBody,
   RespuestaCrearCitaCliente,
+  VincularBarberoResponse,
 } from './types'
 
 export function loginUnificado(
@@ -75,6 +77,14 @@ export function obtenerBarberosCliente(): Promise<BarberoCliente[]> {
   return peticion<BarberoCliente[]>('/cliente/barberos', { zona: 'cliente' })
 }
 
+export function vincularBarbero(codigo: string): Promise<VincularBarberoResponse> {
+  return peticion<VincularBarberoResponse>('/cliente/barberos', {
+    metodo: 'POST',
+    cuerpo: { codigo },
+    zona: 'cliente',
+  })
+}
+
 export function crearCitaCliente(
   codigo: string,
   cuerpo: CrearCitaClienteBody,
@@ -91,4 +101,11 @@ export function crearCitaCliente(
 
 export function obtenerCitasCliente(): Promise<CitaCliente[]> {
   return peticion<CitaCliente[]>('/cliente/citas', { zona: 'cliente' })
+}
+
+export function obtenerCitaCliente(id: number): Promise<CitaClienteDetalle> {
+  return peticion<CitaClienteDetalle>(
+    `/cliente/citas/${encodeURIComponent(String(id))}`,
+    { zona: 'cliente' },
+  )
 }

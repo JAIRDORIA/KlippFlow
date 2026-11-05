@@ -10,6 +10,8 @@ import {
   cargarSesion,
   guardarSesion,
   leerPayloadJwt,
+  metodoDeSesion,
+  requiereContrasenaActual,
   sesionDesdeRespuesta,
   tokenVigente,
 } from './sesion'
@@ -98,6 +100,46 @@ describe('leerPayloadJwt y tokenVigente', () => {
     expect(tokenVigente(tokenBarbero(futuro), 'cliente', AHORA)).toBe(false)
     expect(tokenVigente(tokenBarbero(futuro - 7200), 'barbero', AHORA)).toBe(false)
     expect(leerPayloadJwt('no-es-un-jwt')).toBeNull()
+  })
+})
+
+describe('metodo de la sesión', () => {
+  it('lee passkey e iat del payload', () => {
+    const token = crearToken({
+      sub: 7,
+      tipo: 'cliente',
+      username: 'cliente1',
+      metodo: 'passkey',
+      iat: AHORA / 1000,
+      exp: futuro,
+    })
+
+    expect(metodoDeSesion(token)).toBe('passkey')
+    expect(leerPayloadJwt(token)).toMatchObject({
+      metodo: 'passkey',
+      iat: AHORA / 1000,
+    })
+  })
+
+  it('exige contraseña actual salvo Google fresco', () => {
+    const password = crearToken({ tipo: 'cliente', metodo: 'password' })
+    const googleFresco = crearToken({
+      tipo: 'cliente',
+      metodo: 'google',
+      iat: AHORA / 1000 - 5 * 60,
+    })
+    const googleViejo = crearToken({
+      tipo: 'cliente',
+      metodo: 'google',
+      iat: AHORA / 1000 - 11 * 60,
+    })
+    const googleSinIat = crearToken({ tipo: 'cliente', metodo: 'google' })
+
+    expect(requiereContrasenaActual(password, AHORA)).toBe(true)
+    expect(requiereContrasenaActual(googleFresco, AHORA)).toBe(false)
+    expect(requiereContrasenaActual(googleViejo, AHORA)).toBe(true)
+    expect(requiereContrasenaActual(googleSinIat, AHORA)).toBe(true)
+    expect(requiereContrasenaActual('no-es-jwt', AHORA)).toBe(true)
   })
 })
 

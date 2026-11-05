@@ -5,33 +5,44 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
-import { construirOpcionesNotificacion } from './features/notificaciones/domain/notificacion'
-import { urlDestinoSegura } from './features/notificaciones/domain/urlDestino'
+import {
+  construirOpcionesNotificacion,
+  esPayloadCliente,
+  type PayloadPushBase,
+} from './features/notificaciones/domain/notificacion'
+import {
+  urlDestinoCliente,
+  urlDestinoSegura,
+} from './features/notificaciones/domain/urlDestino'
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<string | { url: string; revision?: string | null }>
 }
 
 /**
- * Payload real del backend (`PushPayload` en
- * `docs/backend/NOTIFICACIONES_PUSH.md`): `{ titulo, cuerpo, url }`.
- * `url` llega como `/solicitudes`; `urlDestinoSegura` la traduce a la ruta de
- * esta app y descarta cualquier URL externa.
+ * Payload de los dos push:
+ * - barbero: `{ titulo, cuerpo, url }`.
+ * - cliente: `{ titulo, cuerpo, url, tag, tipo, citaId }`.
+ *
+ * `url` del barbero llega como `/solicitudes`; `urlDestinoSegura` la traduce.
+ * El cliente valida su URL con la misma regla que `volverSeguro` y cae en `/mi`.
  */
-interface PayloadPush {
-  titulo?: string
-  cuerpo?: string
-  url?: string
+interface PayloadPush extends PayloadPushBase {
+  title?: string
+  body?: string
 }
 
 const TITULO_POR_DEFECTO = 'Nueva solicitud de cita'
 const CUERPO_POR_DEFECTO = 'Tienes una nueva solicitud de cita.'
+const TITULO_CLIENTE_POR_DEFECTO = 'Actualización de tu cita'
+const CUERPO_CLIENTE_POR_DEFECTO = 'Revisa el estado de tu cita.'
 
-interface MensajeRefresco {
-  tipo: 'klippflow:refrescar'
+interface MensajePush {
+  tipo: 'klippflow:refrescar' | 'push-cliente'
 }
 
-const MENSAJE_REFRESCO: MensajeRefresco = { tipo: 'klippflow:refrescar' }
+const MENSAJE_REFRESCO: MensajePush = { tipo: 'klippflow:refrescar' }
+const MENSAJE_PUSH_CLIENTE: MensajePush = { tipo: 'push-cliente' }
 
 // `self.__WB_MANIFEST` debe aparecer una sola vez: workbox lo reemplaza al
 // inyectar el precache.
@@ -96,26 +107,37 @@ function leerPayload(evento: PushEvent): PayloadPush {
       titulo,
       cuerpo,
       url: typeof registro.url === 'string' ? registro.url : undefined,
+      tag: typeof registro.tag === 'string' ? registro.tag : undefined,
+      tipo: typeof registro.tipo === 'string' ? registro.tipo : undefined,
+      citaId:
+        typeof registro.citaId === 'number' && Number.isFinite(registro.citaId)
+          ? registro.citaId
+          : undefined,
     }
   } catch {
     return { cuerpo: evento.data.text() }
   }
 }
 
-async function avisarARefrescar(): Promise<void> {
+async function avisarVentanas(mensaje: MensajePush): Promise<void> {
   const ventanas = await self.clients.matchAll({
     type: 'window',
     includeUncontrolled: true,
   })
   for (const ventana of ventanas) {
-    ventana.postMessage(MENSAJE_REFRESCO)
+    ventana.postMessage(mensaje)
   }
 }
 
 self.addEventListener('push', (evento) => {
   const payload = leerPayload(evento)
-  const titulo = payload.titulo?.trim() || TITULO_POR_DEFECTO
-  const cuerpo = payload.cuerpo?.trim() || CUERPO_POR_DEFECTO
+  const esCliente = esPayloadCliente(payload)
+  const titulo =
+    payload.titulo?.trim() ||
+    (esCliente ? TITULO_CLIENTE_POR_DEFECTO : TITULO_POR_DEFECTO)
+  const cuerpo =
+    payload.cuerpo?.trim() ||
+    (esCliente ? CUERPO_CLIENTE_POR_DEFECTO : CUERPO_POR_DEFECTO)
 
   evento.waitUntil(
     (async () => {
@@ -123,10 +145,18 @@ self.addEventListener('push', (evento) => {
       // Android usa como máscara de alfa en la barra de estado.
       await self.registration.showNotification(
         titulo,
-        construirOpcionesNotificacion(cuerpo, payload.url, self.location.origin),
+        construirOpcionesNotificacion(
+          cuerpo,
+          payload.url,
+          self.location.origin,
+          payload.tag,
+          esCliente ? 'cliente' : 'barbero',
+        ),
       )
-      // Con la app abierta, la lista de Solicitudes se refresca sola.
-      await avisarARefrescar()
+      // El barbero refresca Solicitudes; el cliente invalida sus citas.
+      await avisarVentanas(
+        esCliente ? MENSAJE_PUSH_CLIENTE : MENSAJE_REFRESCO,
+      )
     })(),
   )
 })
@@ -134,11 +164,15 @@ self.addEventListener('push', (evento) => {
 self.addEventListener('notificationclick', (evento) => {
   evento.notification.close()
 
-  const datos = evento.notification.data as { url?: unknown } | undefined
-  const url = urlDestinoSegura(
-    typeof datos?.url === 'string' ? datos.url : undefined,
-    self.location.origin,
-  )
+  const datos = evento.notification.data as
+    | { url?: unknown; zona?: unknown }
+    | undefined
+  const urlOriginal = typeof datos?.url === 'string' ? datos.url : undefined
+  const esCliente = datos?.zona === 'cliente'
+  const url = esCliente
+    ? urlDestinoCliente(urlOriginal)
+    : urlDestinoSegura(urlOriginal, self.location.origin)
+  const mensaje = esCliente ? MENSAJE_PUSH_CLIENTE : MENSAJE_REFRESCO
 
   evento.waitUntil(
     (async () => {
@@ -151,13 +185,13 @@ self.addEventListener('notificationclick', (evento) => {
         if ('focus' in ventana) {
           await ventana.focus()
           await ventana.navigate(url)
-          ventana.postMessage(MENSAJE_REFRESCO)
+          ventana.postMessage(mensaje)
           return
         }
       }
 
       const nueva = await self.clients.openWindow(url)
-      nueva?.postMessage(MENSAJE_REFRESCO)
+      nueva?.postMessage(mensaje)
     })(),
   )
 })

@@ -409,3 +409,24 @@ sistema visual (tokens, tipografías y kit).
 
 - Contradicción resuelta a favor de `docs/backend/CUENTAS_CLIENTE.md`: el login de 6.1 ya no es exclusivo de barberos, sino unificado (`POST /auth/login`). Se añaden Google, completar cuenta y las pantallas de cliente.
 - Contradicción resuelta a favor de `docs/backend/CUENTAS_CLIENTE.md`: la reserva anónima de 6.10 se retiró (`POST /public/barberos/:codigo/citas` responde 410). `/b/:codigo` exige sesión de cliente y reserva con `POST /cliente/barberos/:codigo/citas`; nombre, celular y correo salen del perfil, no del formulario.
+
+### Discrepancias del Prompt 9 (inicio y push del cliente) frente a `docs/backend/`
+
+- **Payload push:** el prompt habla de `title`, `body`, `url`, `tag`, `tipo` y `citaId`; `docs/backend/PUSH_CLIENTE.md` usa `titulo`, `cuerpo`, `url`, `tag`, `tipo` y `citaId` (claves en español). Se usan las claves del backend y se mantiene el respaldo `title`/`body` para envíos manuales.
+- **Llave pública:** `GET /cliente/push/llave-publica` responde `{ llavePublica }`, mientras el endpoint del barbero responde `{ publicKey }`. El frontend normaliza ambos a un `string`.
+- **Detalle de cita:** `CUENTAS_CLIENTE.md` no detalla el shape de `personas`; se usó el DTO real del backend: `PersonaDetalle { esTitular, nombreAcompanante, duracionTotalMinutos, servicios: [{ nombre, precio, duracionMinutos }] }`.
+- **Manifest:** el proyecto tenía `start_url: '/app'`; el prompt pide `/` para que la PWA instalada abra la app y no una zona privada. Se cambió a `/` (scope `/` ya cubre `/mi` y `/b`).
+- **Acción de cancelar cita:** el prompt la excluye expresamente; el detalle del cliente solo muestra el estado y el motivo, sin botón de cancelar.
+
+### Discrepancias del Frontend C (passkeys de cliente) frente a `docs/backend/`
+
+- **Versión del paquete:** `docs/backend/PASSKEYS.md` usa `@simplewebauthn/server` `^14.0.3`, pero npm solo publica `@simplewebauthn/browser` hasta `14.0.0`. Se instaló `14.0.0`, misma major y misma API `{ optionsJSON }`.
+- **Cambio de contraseña:** la pantalla anterior enviaba solo `{ nuevaContrasena }`, pero `docs/backend/CUENTAS_CLIENTE.md:261-266` exige `contrasenaActual` salvo Google emitido hace ≤ 10 minutos. Se corrigió para pedirla cuando el claim `metodo` es `password` o `passkey` (o Google vencido).
+- **Mensaje 401 de login:** `docs/backend/PASSKEYS.md:41-42` define “No se pudo iniciar sesión con la passkey”; la UI usa además “Usa tu usuario y contraseña.”, como pide este prompt. No se cambió el contrato.
+- **Permissions-Policy:** `vercel.json` declaraba cámara, micrófono y geolocalización, pero no `publickey-credentials-get/create`; sus allowlists por defecto son `self`. Se añadieron explícitamente `publickey-credentials-get=(self)` y `publickey-credentials-create=(self)`.
+
+### Notas del Frontend D (política de privacidad)
+
+- **Passkeys:** el prompt pedía decir “solo guardamos una clave pública”, pero `PASSKEYS.md` confirma también `credential_id`, `user_handle`, nombre, tipo de dispositivo, respaldo y fechas. La política enumera esos datos y aclara que la huella/rostro/PIN no se reciben.
+- **Indexación:** `index.html` y `vercel.json` bloqueaban toda la app con `noindex`; se retiraron el meta global y el `X-Robots-Tag` global para que `/privacidad` sea indexable. `robots.txt` permite solo `/privacidad` y `MetaNoIndex` mantiene el resto fuera.
+- **Autorización:** el checkbox de `/registro/completar` es obligatorio en frontend, pero el backend no registra todavía la autorización ni su versión/fecha.

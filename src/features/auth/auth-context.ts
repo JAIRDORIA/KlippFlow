@@ -1,6 +1,7 @@
 import { createContext } from 'react'
 import type { TipoSesion } from '@/shared/lib/rutas'
 import type {
+  MetodoSesion,
   PerfilCliente,
   RegistroPendiente,
   RespuestaLogin,
@@ -14,6 +15,8 @@ export interface AuthContextValue {
   tipo: TipoSesion | null
   usuario: UsuarioSesion | null
   nombre: string | null
+  /** Claim `metodo` del JWT; solo UI. */
+  metodo: MetodoSesion | null
   /** Solo en memoria: se pierde al recargar la página. */
   registroPendiente: RegistroPendiente | null
   iniciarSesion: (respuesta: RespuestaLogin) => Sesion

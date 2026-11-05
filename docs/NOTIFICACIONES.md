@@ -1,11 +1,13 @@
 # Notificaciones push y onboarding de instalación
 
-Prompt 6 del frontend. Implementa el onboarding `/instalar` y las notificaciones
-push del barbero (service worker, suscripción y tarjeta de estado en Ajustes).
+Prompts 6 y 9 del frontend. Implementa el onboarding `/instalar` y las
+notificaciones push del barbero y del cliente (service worker, suscripción,
+tarjeta de estado y avisos de activación).
 
 Fuentes de verdad:
 
 - `docs/backend/NOTIFICACIONES_PUSH.md`
+- `docs/backend/PUSH_CLIENTE.md`
 - `docs/DISENO.md` 6.2, 6.9 y 8
 - `PROJECT_CONTEXT.md`
 
@@ -41,12 +43,18 @@ src/features/notificaciones/
     TarjetaNotificaciones.tsx              tarjeta de Ajustes
   domain/
     vapid.ts            base64url → Uint8Array
-    plataforma.ts       iOS / Android / escritorio y modo instalado
+    plataforma.ts       iOS / Android / escritorio, modo instalado y permiso
     onboarding.ts       decisión + política de "Hacerlo después"
-    urlDestino.ts       URL segura del clic
+    urlDestino.ts       URL segura del clic (barbero y cliente)
     suscripcion.ts    PushSubscription → cuerpo de la API
     errores.ts          mapa de errores
     *.test.ts
+
+src/features/cuentas-cliente/
+  MiInstalarPage.tsx                 /mi/instalar
+  components/AvisoActivarApp.tsx     matriz de avisos y activación
+  domain/avisoApp.ts                 descarte por cliente durante 7 días
+  useInvalidarCitasPush.ts           invalida citas al recibir push-cliente
 ```
 
 ---
@@ -58,18 +66,22 @@ src/features/notificaciones/
 | `GET /barbero/push/llave-publica` | Devuelve `{ publicKey }` (base64url). Requiere JWT de barbero. |
 | `POST /barbero/push/suscripciones` | Body `{ endpoint, keys: { p256dh, auth } }`. `201` si es nueva, `200` si se actualizó; ambas `{ creada: boolean }`. |
 | `DELETE /barbero/push/suscripciones` | Body `{ endpoint }`. `204`. `404` si no es del barbero del token. |
+| `GET /cliente/push/llave-publica` | Devuelve `{ llavePublica }` (base64url). Requiere JWT de cliente. |
+| `POST /cliente/push/suscripcion` | Mismo body que el barbero. `201` nueva, `200` actualizada; `{ creada: boolean }`. |
+| `DELETE /cliente/push/suscripcion` | Body `{ endpoint }`. `204`; `404` si no es del cliente del token. |
 
-- El `barberoId` sale **siempre** del JWT; enviarlo en el body da 400.
+- El `barberoId`/`clienteId` sale **siempre** del JWT; enviarlo en el body da 400.
 - El `endpoint` es único: si ya existe, se actualizan las llaves y se **reasigna**
-  al barbero actual (dos barberos en el mismo equipo).
-- Máximo 10 suscripciones por barbero: el backend borra las más antiguas.
+  al usuario actual del mismo rol (dos usuarios en el mismo equipo).
+- Máximo 10 suscripciones por barbero y 5 por cliente; el backend borra las más
+  antiguas.
 - Suscripciones caducadas (404/410 del servicio push): el backend las borra. El
   frontend no tiene que hacer nada; la próxima apertura re-sincroniza.
 
 ### Payload real de la notificación
 
-`JSON.stringify(payload)` con `PushPayload` = **`{ titulo, cuerpo, url }`**
-(claves en español, planas; `url` = `/solicitudes`):
+Barbero: `JSON.stringify(payload)` con `PushPayload` =
+**`{ titulo, cuerpo, url }`** (claves en español, planas; `url` = `/solicitudes`):
 
 ```json
 {
@@ -82,9 +94,29 @@ src/features/notificaciones/
 Se dispara al crear una cita pública (`estado = pendiente`), **después** del
 commit, fire-and-forget. No incluye celular ni correo del cliente.
 
+Cliente (`docs/backend/PUSH_CLIENTE.md`): mismas claves en español más `tag`,
+`tipo` y `citaId`; `url` = `/mi/citas/{id}`:
+
+```json
+{
+  "titulo": "Tu cita fue aceptada",
+  "cuerpo": "Ana aceptó tu cita del 6 nov a las 3:30 p. m.",
+  "url": "/mi/citas/42",
+  "tag": "cita-42",
+  "tipo": "cita_aceptada",
+  "citaId": 42
+}
+```
+
+`tipo` puede ser `cita_aceptada`, `cita_rechazada`, `cita_cancelada` o
+`cita_expirada`. El service worker detecta el push de cliente por `tipo`,
+`citaId` o URL de `/mi`; usa `tag` para reemplazar la notificación anterior de
+la misma cita.
+
 `/solicitudes` no existe en esta app (la pantalla es `/app/solicitudes`), así que
 `urlDestinoSegura` traduce esa ruta heredada. Cualquier URL de otro origen, o con
-otro esquema, cae en `/app/solicitudes`.
+otro esquema, cae en `/app/solicitudes`. Para el cliente, `urlDestinoCliente`
+acepta `/mi`, `/mi/*`, `/b/*` y `/cita/*`; lo demás cae en `/mi`.
 
 ---
 
@@ -97,9 +129,9 @@ otro esquema, cae en `/app/solicitudes`.
 - **`push`**: muestra la notificación con `titulo` y `cuerpo` del payload (con
   respaldo `title`/`body` si alguien envía el formato estándar), `icon`
   `/icons/icon-192.png`, `badge` `/icons/badge-96.png` y `data.url` ya
-  normalizada. Después avisa a las ventanas abiertas
-  (`{ tipo: 'klippflow:refrescar' }`) para que la lista de Solicitudes
-  se refresque sola.
+  normalizada. El cliente añade `tag` y `data.zona = 'cliente'`. Después avisa a
+  las ventanas abiertas: `{ tipo: 'klippflow:refrescar' }` para el barbero y
+  `{ tipo: 'push-cliente' }` para el cliente, que invalida sus citas.
 
 ### Badge de la notificación
 
@@ -132,8 +164,9 @@ clásico y se registra con `type: 'classic'`.
 
 ## 4. Estados
 
-`useNotificaciones()` devuelve `estado`, `ocupado`, `error`, `permiso`,
-`plataforma`, `standalone`, `soportePush`, `activar()`, `desactivar()` y
+`useNotificaciones('barbero' | 'cliente')` devuelve `estado`, `ocupado`, `error`,
+`permiso`, `plataforma`, `standalone`, `soportePush`, `activar()`,
+`desactivar()` y
 `reintentar()`.
 
 | Estado | Cuándo |
@@ -149,19 +182,20 @@ clásico y se registra con `type: 'classic'`.
 El permiso **solo** se pide dentro de `activar()`, que está atado a un clic, y es
 la primera operación asíncrona (sin esperas previas) para no perder el gesto.
 
-`activar()`:
+`activar()` (el rol se fija al llamar `useNotificaciones(zona)`):
 
 1. `Notification.requestPermission()` (si ya estaba concedido no muestra nada).
-2. `GET /barbero/push/llave-publica` → `claveVapidABytes()`.
+2. `GET /barbero/push/llave-publica` o `GET /cliente/push/llave-publica` →
+   `claveVapidABytes()`.
 3. `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` o
    reutiliza la suscripción existente.
-4. `POST /barbero/push/suscripciones`.
+4. `POST /barbero/push/suscripciones` o `POST /cliente/push/suscripcion`.
 5. Toast "Notificaciones activadas" y estado `activo`.
 
 Si el backend falla, el estado queda en `error` (nunca en `activo`) y el botón
 permite reintentar.
 
-`desactivar()`: `DELETE /barbero/push/suscripciones` (tolera 404) y
+`desactivar()`: `DELETE` del endpoint del rol (tolera 404) y
 `suscripcion.unsubscribe()`.
 
 ### Sincronización y cierre de sesión
@@ -187,6 +221,28 @@ permite reintentar.
 
 Para volver a ver el onboarding: borrar esa clave en DevTools o esperar 24 h.
 
+### Aviso de instalación/notificaciones del cliente (`AvisoActivarApp`)
+
+| Situación | Qué se muestra |
+|---|---|
+| iPhone/iPad sin instalar | Tarjeta “Instala la app para recibir el aviso cuando el barbero responda”, enlace a `/mi/instalar` y la nota “Al abrir la app instalada, vuelve a iniciar sesión con tu usuario y contraseña.” |
+| iPhone/iPad instalado con permiso `default` | Tarjeta con “Activar notificaciones”. |
+| Android/escritorio con permiso `default` | Tarjeta con “Activar notificaciones”; si el navegador lanzó `beforeinstallprompt`, botón secundario “Instalar app”. |
+| Permiso `granted` | En `/mi`, una línea discreta “Notificaciones activas ✓”; en la confirmación, nada. |
+| Permiso `denied` | “Las notificaciones están bloqueadas. Actívalas en los ajustes del navegador o de la app.” Sin volver a pedir el permiso. |
+| Sin soporte | “Tu navegador no admite notificaciones. Revisa el estado de tu cita en Mis citas.” |
+| Fallo de activación | Mensaje del error + “Reintentar”. |
+
+- En `/mi`, la tarjeta se puede descartar y no reaparece hasta pasados **7 días**
+  (`klippflow.cliente.avisoApp.<clienteId>`, `localStorage` con try/catch).
+- En la confirmación de una reserva (`/b/:codigo`) el bloque se muestra
+  destacado y **no se puede descartar**.
+- El permiso solo se pide al pulsar “Activar notificaciones”; iniciar sesión no
+  abre ningún diálogo.
+- Al cerrar sesión del cliente se hace `DELETE /cliente/push/suscripcion`; un
+  404 o un fallo no bloquea el cierre. Si el permiso ya estaba concedido y hay
+  suscripción, al entrar se re-sincroniza en silencio.
+
 ---
 
 ## 6. Mapa de errores
@@ -208,7 +264,7 @@ Para volver a ver el onboarding: borrar esa clave en DevTools o esperar 24 h.
 
 - `POST /barbero/push/probar` ("Enviar prueba"): fuera del alcance de este
   prompt. El endpoint existe y está documentado.
-- Push al cliente, panel de administración, cambio de contraseña y pagos.
+- Panel de administración, cambio de contraseña y pagos.
 - `pushsubscriptionchange` (ver §3).
 
 ---

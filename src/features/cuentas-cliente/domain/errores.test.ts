@@ -106,10 +106,12 @@ describe('mapearErrorCreacionCliente', () => {
 })
 
 describe('mapearErrorContrasena y mapearErrorPerfil', () => {
-  it('un 400 de contraseña pide volver a entrar con Google', () => {
-    expect(mapearErrorContrasena(error(400))).toBe(
-      'Vuelve a entrar con Google para continuar',
-    )
+  it('un 400 de contraseña muestra el mensaje de la API', () => {
+    expect(
+      mapearErrorContrasena(
+        error(400, 'Debes enviar tu contraseña actual para cambiarla'),
+      ),
+    ).toBe('Debes enviar tu contraseña actual para cambiarla')
     expect(mapearErrorContrasena(error(429))).toBe(
       'Demasiados intentos, espera un momento',
     )

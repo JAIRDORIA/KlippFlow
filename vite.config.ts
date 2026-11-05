@@ -30,9 +30,9 @@ export default defineConfig({
         name: 'KlippFlow',
         short_name: 'KlippFlow',
         description:
-          'Agenda, caja y avisos para barberos. Tus clientes reservan sin crear cuenta.',
+          'Agenda, caja y avisos para barberos. Tus clientes reservan con su cuenta de cliente.',
         lang: 'es-CO',
-        start_url: '/app',
+        start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',

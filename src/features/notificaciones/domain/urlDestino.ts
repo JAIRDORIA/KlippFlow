@@ -10,7 +10,10 @@
  * - Sin URL o URL inválida: `/app/solicitudes`.
  */
 
+import { volverSeguro } from '@/shared/lib/rutas'
+
 export const RUTA_SOLICITUDES = '/app/solicitudes'
+export const RUTA_CLIENTE = '/mi'
 
 /** Rutas heredadas del backend → ruta real de esta app. */
 const RUTAS_HEREDADAS: Record<string, string> = {
@@ -49,4 +52,12 @@ export function urlDestinoSegura(
   if (heredada) return heredada
 
   return `${ruta}${resuelta.search}`
+}
+
+/**
+ * Destino del push de cliente: misma regla que `volverSeguro` (`/mi`, `/mi/*`,
+ * `/b/*`, `/cita/*`). Cualquier URL externa o fuera de esas rutas cae en `/mi`.
+ */
+export function urlDestinoCliente(url: string | null | undefined): string {
+  return volverSeguro(url) ?? RUTA_CLIENTE
 }

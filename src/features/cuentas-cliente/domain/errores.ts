@@ -4,7 +4,6 @@ const MENSAJE_GENERICO = 'Algo salió mal. Inténtalo de nuevo.'
 const MENSAJE_RED = 'No pudimos conectar. Revisa tu internet.'
 const MENSAJE_GOOGLE_NO_DISPONIBLE = 'Inicio con Google no disponible'
 const MENSAJE_REINICIAR_GOOGLE = 'Vuelve a continuar con Google'
-const MENSAJE_CONTRASENA_GOOGLE = 'Vuelve a entrar con Google para continuar'
 
 function mensajeDeApi(error: ErrorPeticion): string {
   if (error.campos && error.campos.length > 0) return error.campos.join(' · ')
@@ -67,7 +66,7 @@ export function mapearErrorCompletarCuenta(error: unknown): string {
 export function mapearErrorContrasena(error: unknown): string {
   if (!(error instanceof ErrorPeticion)) return MENSAJE_GENERICO
 
-  if (error.status === 400) return MENSAJE_CONTRASENA_GOOGLE
+  if (error.status === 400) return mensajeDeApi(error)
   if (error.status === 429) return 'Demasiados intentos, espera un momento'
   if (error.status === 0) return MENSAJE_RED
   if (error.status === 401) return error.mensaje || MENSAJE_GENERICO
@@ -78,6 +77,17 @@ export function mapearErrorContrasena(error: unknown): string {
 export function mapearErrorPerfil(error: unknown): string {
   if (!(error instanceof ErrorPeticion)) return MENSAJE_GENERICO
 
+  if (error.status === 0) return MENSAJE_RED
+  if (error.status === 400) return mensajeDeApi(error)
+  if (error.status === 429) return 'Demasiados intentos, espera un momento'
+
+  return MENSAJE_GENERICO
+}
+
+export function mapearErrorAgregarBarbero(error: unknown): string {
+  if (!(error instanceof ErrorPeticion)) return MENSAJE_GENERICO
+
+  if (error.status === 404) return 'No encontramos ese código'
   if (error.status === 0) return MENSAJE_RED
   if (error.status === 400) return mensajeDeApi(error)
   if (error.status === 429) return 'Demasiados intentos, espera un momento'

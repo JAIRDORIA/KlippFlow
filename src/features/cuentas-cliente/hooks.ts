@@ -23,15 +23,31 @@ import {
   loginGoogle,
   loginUnificado,
   obtenerBarberosCliente,
+  obtenerCitaCliente,
   obtenerCitasCliente,
   obtenerPerfil,
+  vincularBarbero,
 } from './api'
-import type { CitaCliente, CrearCitaClienteBody } from './types'
+import type {
+  CitaCliente,
+  CitaClienteDetalle,
+  CrearCitaClienteBody,
+  VincularBarberoResponse,
+} from './types'
 
 export const clavesCliente = {
   perfil: ['cliente', 'perfil'] as const,
   barberos: ['cliente', 'barberos'] as const,
   citas: ['cliente', 'citas'] as const,
+  cita: (id: number) => ['cliente', 'citas', id] as const,
+}
+
+function pestanaVisible(): boolean {
+  return typeof document === 'undefined' || document.visibilityState === 'visible'
+}
+
+function hayPendiente(citas: readonly { estado: string }[] | undefined): boolean {
+  return citas?.some((cita) => cita.estado === 'pendiente') ?? false
 }
 
 function reintentar(intentos: number, error: unknown): boolean {
@@ -131,6 +147,41 @@ export function useCitasCliente() {
     enabled: tipo === 'cliente',
     staleTime: 30_000,
     retry: reintentar,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchInterval: (consulta) => {
+      if (!pestanaVisible()) return false
+      return hayPendiente(consulta.state.data) ? 30_000 : false
+    },
+  })
+}
+
+export function useCitaCliente(id: number, habilitada = true) {
+  const { tipo } = useAuth()
+
+  return useQuery<CitaClienteDetalle>({
+    queryKey: clavesCliente.cita(id),
+    queryFn: () => obtenerCitaCliente(id),
+    enabled: tipo === 'cliente' && habilitada && Number.isInteger(id) && id > 0,
+    staleTime: 30_000,
+    retry: reintentar,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchInterval: (consulta) => {
+      if (!pestanaVisible()) return false
+      return consulta.state.data?.estado === 'pendiente' ? 30_000 : false
+    },
+  })
+}
+
+export function useAgregarBarberoCliente() {
+  const queryClient = useQueryClient()
+
+  return useMutation<VincularBarberoResponse, unknown, string>({
+    mutationFn: vincularBarbero,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: clavesCliente.barberos })
+    },
   })
 }
 

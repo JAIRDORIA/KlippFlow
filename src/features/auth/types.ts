@@ -4,6 +4,7 @@ import type { TipoSesion } from '@/shared/lib/rutas'
 
 export type EstadoCuenta = 'activo' | 'suspendido' | 'vencido'
 export type TipoToken = 'cliente' | 'barbero' | 'admin'
+export type MetodoSesion = 'password' | 'google' | 'passkey'
 
 export interface CredencialesLogin {
   username: string
@@ -139,6 +140,9 @@ export interface PayloadJwt {
   sub?: number
   tipo?: TipoToken
   username?: string
+  /** Claim del backend: método con el que se emitió la sesión. */
+  metodo?: MetodoSesion
+  iat?: number
   exp?: number
 }
 

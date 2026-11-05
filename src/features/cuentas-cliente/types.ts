@@ -47,4 +47,27 @@ export interface CitaCliente {
   motivos: MotivosCitaCliente
 }
 
+export interface ServicioDetalleCliente {
+  nombre: string
+  precio: MontoApi
+  duracionMinutos: number
+}
+
+export interface PersonaDetalleCliente {
+  esTitular: boolean
+  nombreAcompanante: string | null
+  duracionTotalMinutos: number
+  servicios: ServicioDetalleCliente[]
+}
+
+/** `GET /cliente/citas/:id`: listado + personas y servicios. */
+export interface CitaClienteDetalle extends CitaCliente {
+  personas: PersonaDetalleCliente[]
+}
+
+export interface VincularBarberoResponse {
+  creado: boolean
+  barbero: BarberoCliente
+}
+
 export type RespuestaCrearCitaCliente = CitaCreada

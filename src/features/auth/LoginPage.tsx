@@ -16,6 +16,12 @@ import {
   useLoginUnificado,
 } from '@/features/cuentas-cliente/hooks'
 import {
+  mapearErrorPasskey,
+  soportaPasskeys,
+} from '@/features/passkeys/domain/passkeys'
+import { leerMarcaPasskey } from '@/features/passkeys/domain/marca'
+import { useLoginPasskey } from '@/features/passkeys/hooks'
+import {
   almacenDelNavegador,
   decidirOnboarding,
   leerDescarte,
@@ -29,6 +35,8 @@ import { rutaInicialPorRol, volverSeguro } from '@/shared/lib/rutas'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Logo } from '@/shared/ui/Logo'
+import { EnlacePrivacidad } from '@/features/legal/components/EnlacePrivacidad'
+import { TextoAceptacionGoogle } from '@/features/legal/components/TextoAceptacionGoogle'
 import { BotonGoogle } from './components/BotonGoogle'
 import { useAuth } from './useAuth'
 
@@ -64,15 +72,19 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [mostrarPassword, setMostrarPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorPasskey, setErrorPasskey] = useState<string | null>(null)
+  const [marcaPasskey, setMarcaPasskey] = useState(() => leerMarcaPasskey())
 
   const recuperar = parametros.get('recuperar') === '1'
   const volver = volverSeguro(parametros.get('volver'))
   const aviso = avisoPorMotivo(parametros.get('motivo'))
   const puedeEntrar = username.trim().length > 0 && password.length > 0
+  const soporta = soportaPasskeys()
 
   const login = useLoginUnificado()
   const google = useLoginGoogle()
-  const pendiente = login.isPending || google.isPending
+  const passkey = useLoginPasskey()
+  const pendiente = login.isPending || google.isPending || passkey.isPending
 
   if (estaAutenticado) {
     return <Navigate to={rutaInicialPorRol(tipo)} replace />
@@ -96,6 +108,23 @@ export function LoginPage() {
         onError: (fallo) => setError(mapearErrorLogin(fallo)),
       },
     )
+  }
+
+  function entrarConPasskey() {
+    if (pendiente) return
+    setError(null)
+    setErrorPasskey(null)
+    passkey.mutate(undefined, {
+      onSuccess: () => {
+        navegar(volver ?? '/mi', { replace: true })
+      },
+      onError: (fallo) => {
+        // El hook borra la marca si el backend responde 401.
+        setMarcaPasskey(leerMarcaPasskey())
+        const mapeado = mapearErrorPasskey(fallo, 'login')
+        if (!mapeado.silencioso) setErrorPasskey(mapeado.mensaje)
+      },
+    })
   }
 
   function entrarConGoogle(idToken: string) {
@@ -144,8 +173,11 @@ export function LoginPage() {
       {recuperar ? (
         <section className="mx-auto mt-12 flex w-full max-w-[360px] flex-col gap-5">
           <h2 className="type-card-title text-center">
-            Entra con Google para crear una contraseña nueva
+            Recupera tu cuenta de cliente
           </h2>
+          <p className="type-helper text-center">
+            Entra con Google para crear una contraseña nueva.
+          </p>
 
           {aviso && (
             <p
@@ -169,14 +201,35 @@ export function LoginPage() {
             onCredential={entrarConGoogle}
             deshabilitado={pendiente}
           />
+          <TextoAceptacionGoogle />
+          <p className="type-helper text-center">
+            Barberos: pide al administrador que restablezca tu contraseña.
+          </p>
         </section>
       ) : (
         <>
+          {soporta && marcaPasskey && (
+            <BotonPasskey
+              principal
+              onClick={entrarConPasskey}
+              cargando={passkey.isPending}
+              deshabilitado={pendiente}
+              error={errorPasskey}
+            />
+          )}
+
           <form
             onSubmit={enviar}
-            className="mx-auto mt-12 flex w-full max-w-[360px] flex-col gap-5"
+            className={`mx-auto ${
+              soporta && marcaPasskey ? 'mt-6' : 'mt-12'
+            } flex w-full max-w-[360px] flex-col gap-5`}
             noValidate
           >
+            <h2 className="type-card-title">Entrar</h2>
+            <p className="type-helper">
+              Barberos: usa el usuario y la contraseña que te dio el
+              administrador.
+            </p>
             <Input
               etiqueta="Usuario"
               name="username"
@@ -224,13 +277,18 @@ export function LoginPage() {
               }
             />
 
-            <div className="flex justify-end">
-              <Link
-                to="/login?recuperar=1"
-                className="type-small inline-flex min-h-[var(--height-button-compact)] items-center text-secondary underline underline-offset-2 hover:text-text"
-              >
-                Olvidé mi contraseña
-              </Link>
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-end">
+                <Link
+                  to="/login?recuperar=1"
+                  className="type-small inline-flex min-h-[var(--height-button-compact)] items-center text-secondary underline underline-offset-2 hover:text-text"
+                >
+                  Soy cliente y olvidé mi contraseña
+                </Link>
+              </div>
+              <p className="type-helper text-right">
+                Barberos: pide al administrador que restablezca tu contraseña.
+              </p>
             </div>
 
             {aviso && (
@@ -267,18 +325,83 @@ export function LoginPage() {
             <span aria-hidden="true" className="h-px flex-1 bg-line" />
           </div>
 
-          <div className="mx-auto mt-5 w-full max-w-[360px]">
+          <section
+            aria-labelledby="login-clientes"
+            className="mx-auto mt-5 flex w-full max-w-[360px] flex-col gap-4"
+          >
+            <h2 id="login-clientes" className="type-card-title text-center">
+              ¿Eres cliente?
+            </h2>
+            <p className="type-helper text-center">
+              Si es tu primera vez, crearás tu cuenta de cliente.
+            </p>
             <BotonGoogle
               onCredential={entrarConGoogle}
               deshabilitado={pendiente}
             />
-          </div>
-
-          <p className="type-helper mx-auto mt-8 max-w-[360px] text-center">
-            Si es tu primera vez, crearás tu cuenta.
-          </p>
+            <TextoAceptacionGoogle />
+            {soporta && !marcaPasskey && (
+              <BotonPasskey
+                onClick={entrarConPasskey}
+                cargando={passkey.isPending}
+                deshabilitado={pendiente}
+                error={errorPasskey}
+              />
+            )}
+          </section>
         </>
       )}
+
+      <footer className="mx-auto mt-10 w-full max-w-[360px] pb-6 text-center">
+        <EnlacePrivacidad />
+      </footer>
     </main>
+  )
+}
+
+function BotonPasskey({
+  principal = false,
+  onClick,
+  cargando,
+  deshabilitado,
+  error,
+}: {
+  principal?: boolean
+  onClick: () => void
+  cargando: boolean
+  deshabilitado: boolean
+  error: string | null
+}) {
+  return (
+    <section
+      aria-label="Entrar con passkey"
+      className={
+        principal
+          ? 'mx-auto mt-12 flex w-full max-w-[360px] flex-col gap-2'
+          : 'mt-2 flex flex-col gap-2'
+      }
+    >
+      <Button
+        type="button"
+        variante={principal ? 'primary' : 'ghost'}
+        onClick={onClick}
+        disabled={deshabilitado}
+        aria-disabled={deshabilitado || undefined}
+        cargando={cargando}
+        className="w-full"
+      >
+        {principal ? 'Entrar con huella o PIN' : 'Entrar con passkey'}
+      </Button>
+      <p className="type-helper text-center">
+        Solo para cuentas de cliente.
+      </p>
+      <div aria-live="polite" className="min-h-0">
+        {error && (
+          <p role="alert" className="type-helper text-center text-red">
+            {error}
+          </p>
+        )}
+      </div>
+    </section>
   )
 }

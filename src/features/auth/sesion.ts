@@ -6,6 +6,7 @@ import type { TipoSesion } from '@/shared/lib/rutas'
 import type {
   BarberoAutenticado,
   ClienteAutenticado,
+  MetodoSesion,
   PayloadJwt,
   PerfilCliente,
   RespuestaLogin,
@@ -47,11 +48,20 @@ export function leerPayloadJwt(token: string): PayloadJwt | null {
       payload.tipo === 'barbero' || payload.tipo === 'admin' || payload.tipo === 'cliente'
         ? payload.tipo
         : undefined
+    const metodo =
+      payload.metodo === 'password' ||
+      payload.metodo === 'google' ||
+      payload.metodo === 'passkey'
+        ? payload.metodo
+        : undefined
+    const iat = typeof payload.iat === 'number' ? payload.iat : undefined
 
     return {
       sub: typeof payload.sub === 'number' ? payload.sub : undefined,
       tipo,
       username: typeof payload.username === 'string' ? payload.username : undefined,
+      ...(metodo ? { metodo } : {}),
+      ...(iat !== undefined ? { iat } : {}),
       exp: typeof payload.exp === 'number' ? payload.exp : undefined,
     }
   } catch {
@@ -69,6 +79,26 @@ export function tokenVigente(
   if (!payload?.tipo || payload.tipo !== tipo) return false
   if (typeof payload.exp !== 'number') return false
   return payload.exp * 1000 > ahoraMs
+}
+
+/** `metodo` del JWT; solo para UI, no para autorizar. */
+export function metodoDeSesion(token: string): MetodoSesion | null {
+  return leerPayloadJwt(token)?.metodo ?? null
+}
+
+/**
+ * Réplica de la regla del backend (`CUENTAS_CLIENTE.md:264-266`):
+ * `contrasenaActual` es obligatoria salvo Google emitido hace ≤ 10 minutos.
+ */
+export function requiereContrasenaActual(
+  token: string,
+  ahoraMs: number = Date.now(),
+): boolean {
+  const payload = leerPayloadJwt(token)
+  if (payload?.metodo !== 'google') return true
+  if (typeof payload.iat !== 'number') return true
+
+  return ahoraMs / 1000 - payload.iat > 10 * 60
 }
 
 function esEstadoCuenta(valor: unknown): valor is BarberoAutenticado['estadoCuenta'] {

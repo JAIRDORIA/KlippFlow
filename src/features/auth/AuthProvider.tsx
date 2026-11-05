@@ -13,6 +13,7 @@ import {
   borrarSesion,
   cargarSesion,
   guardarSesion,
+  metodoDeSesion,
   sesionDesdeRespuesta,
 } from './sesion'
 import {
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tipo: sesion?.tipo ?? null,
         usuario: sesion?.usuario ?? null,
         nombre: nombreDeSesion(sesion),
+        metodo: sesion ? metodoDeSesion(sesion.token) : null,
         registroPendiente,
         iniciarSesion,
         guardarRegistroPendiente,

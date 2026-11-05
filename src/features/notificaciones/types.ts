@@ -11,12 +11,23 @@ export type EstadoNotificaciones =
   | 'activo'
   | 'error'
 
+/** Un endpoint es único por rol: barbero y cliente usan rutas distintas. */
+export type ZonaPush = 'barbero' | 'cliente'
+
 /** `GET /barbero/push/llave-publica` */
-export interface LlavePublica {
+export interface LlavePublicaBarbero {
   publicKey: string
 }
 
-/** Body de `POST /barbero/push/suscripciones`. */
+/** Alias histórico del tipo de llave del barbero. */
+export type LlavePublica = LlavePublicaBarbero
+
+/** `GET /cliente/push/llave-publica` */
+export interface LlavePublicaCliente {
+  llavePublica: string
+}
+
+/** Body de `POST /barbero/push/suscripciones` y `/cliente/push/suscripcion`. */
 export interface SuscripcionPush {
   endpoint: string
   keys: {
@@ -25,7 +36,7 @@ export interface SuscripcionPush {
   }
 }
 
-/** Respuesta de `POST /barbero/push/suscripciones`. */
+/** Respuesta de `POST` de suscripción (misma forma en ambos roles). */
 export interface RespuestaSuscripcion {
   creada: boolean
 }

@@ -15,6 +15,8 @@ import {
   mapearErrorPerfil,
 } from '@/features/cuentas-cliente/domain/errores'
 import { validarPerfilCliente } from '@/features/cuentas-cliente/domain/validadores'
+import { AvisoActivarApp } from '@/features/cuentas-cliente/components/AvisoActivarApp'
+import { EnlacePrivacidad } from '@/features/legal/components/EnlacePrivacidad'
 import {
   useActualizarPerfil,
   useCrearCitaCliente,
@@ -152,16 +154,19 @@ function ReservaSinSesion({
 
         <Card className="flex flex-col gap-5">
           <p className="type-form text-secondary">
-            Inicia sesión o crea tu cuenta para reservar
+            Inicia sesión o crea tu cuenta de cliente para reservar
           </p>
           <Link
             to={`/login?volver=${encodeURIComponent(volver)}`}
             className="inline-flex min-h-[var(--height-button)] w-full items-center justify-center rounded-[var(--radius-button)] bg-accent px-[var(--padding-button-x)] text-[var(--font-size-form)] font-semibold text-ink transition-colors hover:bg-white"
           >
-            Iniciar sesión o crear cuenta
+            Iniciar sesión o crear cuenta de cliente
           </Link>
         </Card>
       </div>
+      <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+        <EnlacePrivacidad />
+      </footer>
     </main>
   )
 }
@@ -207,6 +212,9 @@ function ReservaSesionBarbero({
           </p>
         </Card>
       </div>
+      <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+        <EnlacePrivacidad />
+      </footer>
     </main>
   )
 }
@@ -270,7 +278,13 @@ function ErrorCarga({
   )
 }
 
-function ConfirmacionCita({ cita }: { cita: CitaCreada }) {
+function ConfirmacionCita({
+  cita,
+  clienteId,
+}: {
+  cita: CitaCreada
+  clienteId: number
+}) {
   const navegar = useNavigate()
 
   return (
@@ -287,10 +301,18 @@ function ConfirmacionCita({ cita }: { cita: CitaCreada }) {
         <p className="type-small mt-3 text-amber">
           Espera a que el barbero acepte tu solicitud
         </p>
-        <Button className="mt-8 w-full max-w-[320px]" onClick={() => navegar('/mi')}>
+
+        <div className="mt-8 w-full text-left">
+          <AvisoActivarApp contexto="confirmacion" clienteId={clienteId} />
+        </div>
+
+        <Button className="mt-6 w-full max-w-[320px]" onClick={() => navegar('/mi')}>
           Ir a mis citas
         </Button>
       </div>
+      <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+        <EnlacePrivacidad />
+      </footer>
     </main>
   )
 }
@@ -418,7 +440,9 @@ function FormularioReserva({
     )
   }
 
-  if (citaCreada) return <ConfirmacionCita cita={citaCreada} />
+  if (citaCreada) {
+    return <ConfirmacionCita cita={citaCreada} clienteId={cliente.id} />
+  }
 
   return (
     <main className="flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
@@ -675,10 +699,17 @@ function FormularioReserva({
               <p className="type-helper text-center">
                 Sin pago en línea. El barbero aceptará o rechazará tu solicitud.
               </p>
+              <EnlacePrivacidad className="self-center" />
             </div>
           </footer>
         )}
       </form>
+
+      {!barbero.reservasDisponibles && (
+        <footer className="mx-auto mt-8 w-full max-w-[520px] pb-6 text-center">
+          <EnlacePrivacidad />
+        </footer>
+      )}
 
       <Sheet
         abierto={sheetAbierto}

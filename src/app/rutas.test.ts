@@ -25,8 +25,10 @@ describe('zonaDeRuta', () => {
     expect(zonaDeRuta('/b/BARB-0001')).toBe('publico')
     expect(zonaDeRuta('/cita/abc123')).toBe('publico')
     expect(zonaDeRuta('/mi')).toBe('publico')
+    expect(zonaDeRuta('/mi/seguridad')).toBe('publico')
     expect(zonaDeRuta('/mi/nueva-contrasena')).toBe('publico')
     expect(zonaDeRuta('/registro/completar')).toBe('publico')
+    expect(zonaDeRuta('/privacidad')).toBe('publico')
     expect(zonaDeRuta('/admin')).toBe('admin')
     expect(zonaDeRuta('/admin/login')).toBe('admin')
     expect(zonaDeRuta('/loquesea')).toBe('desconocida')
@@ -50,11 +52,15 @@ describe('tituloDeRuta', () => {
     expect(tituloDeRuta('/b/BARB-0001')).toBe('Reservar cita · KlippFlow')
     expect(tituloDeRuta('/cita/token123')).toBe('Tu cita · KlippFlow')
     expect(tituloDeRuta('/mi')).toBe('Mi cuenta · KlippFlow')
+    expect(tituloDeRuta('/mi/seguridad')).toBe('Seguridad · KlippFlow')
     expect(tituloDeRuta('/mi/nueva-contrasena')).toBe(
       'Nueva contraseña · KlippFlow',
     )
     expect(tituloDeRuta('/registro/completar')).toBe(
-      'Completa tu cuenta · KlippFlow',
+      'Completa tu cuenta de cliente · KlippFlow',
+    )
+    expect(tituloDeRuta('/privacidad')).toBe(
+      'Política de privacidad de KlippFlow',
     )
     expect(tituloDeRuta('/loquesea')).toBe('No encontrada · KlippFlow')
     expect(tituloDeRuta('/app/xyz')).toBe('No encontrada · KlippFlow')
@@ -102,6 +108,7 @@ describe('esRutaNoIndex', () => {
       '/instalar',
       '/app/instalar',
       '/mi',
+      '/mi/seguridad',
       '/mi/nueva-contrasena',
       '/registro/completar',
     ]) {
@@ -115,7 +122,8 @@ describe('esRutaNoIndex', () => {
     expect(esRutaNoIndex('/cita/token123')).toBe(true)
   })
 
-  it('no marca rutas fuera de la app (el index.html ya las cubre)', () => {
-    expect(esRutaNoIndex('/loquesea')).toBe(false)
+  it('solo deja indexable la política de privacidad', () => {
+    expect(esRutaNoIndex('/privacidad')).toBe(false)
+    expect(esRutaNoIndex('/loquesea')).toBe(true)
   })
 })

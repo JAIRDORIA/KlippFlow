@@ -40,6 +40,14 @@ afterEach(() => {
 })
 
 describe('LoginPage', () => {
+  it('no muestra passkey si el navegador no la soporta', () => {
+    renderizarLogin()
+
+    expect(
+      screen.queryByRole('button', { name: /passkey|huella o PIN/i }),
+    ).not.toBeInTheDocument()
+  })
+
   it('mantiene el botón Entrar desactivado hasta completar ambos campos', () => {
     renderizarLogin()
 
@@ -81,10 +89,15 @@ describe('LoginPage', () => {
 
     expect(screen.getByText('Inicio con Google no disponible')).toBeInTheDocument()
     expect(
-      screen.getByText('Si es tu primera vez, crearás tu cuenta.'),
+      screen.getByText('Si es tu primera vez, crearás tu cuenta de cliente.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Olvidé mi contraseña' }),
+      screen.getByText(
+        'Barberos: usa el usuario y la contraseña que te dio el administrador.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Soy cliente y olvidé mi contraseña' }),
     ).toHaveAttribute('href', '/login?recuperar=1')
   })
 
@@ -92,7 +105,10 @@ describe('LoginPage', () => {
     renderizarLogin('/login?recuperar=1')
 
     expect(
-      screen.getByText('Entra con Google para crear una contraseña nueva'),
+      screen.getByText('Recupera tu cuenta de cliente'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Entra con Google para crear una contraseña nueva.'),
     ).toBeInTheDocument()
     expect(screen.getByText('Inicio con Google no disponible')).toBeInTheDocument()
     expect(screen.queryByLabelText('Usuario')).not.toBeInTheDocument()

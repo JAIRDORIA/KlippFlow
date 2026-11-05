@@ -10,15 +10,24 @@ Contrato de referencia: `docs/backend/CUENTAS_CLIENTE.md` y
 | `/login` | público | Formulario unificado usuario + contraseña, separador “o” y botón de Google. Acepta `?volver=`. |
 | `/login?recuperar=1` | público | Solo Google, con el texto “Entra con Google para crear una contraseña nueva”. |
 | `/registro/completar` | solo con registro en memoria | Título “Completa tu cuenta”: nombre, usuario, contraseña y celular. |
-| `/mi` | cliente | Mínimo: saludo, “Mis barberos”, estado vacío y cerrar sesión. |
-| `/mi/nueva-contrasena` | cliente | `PUT /cliente/contrasena` con `{ nuevaContrasena }`. |
-| `/b/:codigo` | según sesión | Público: invitación a entrar. Barbero: aviso para cerrar sesión. Cliente: formulario de reserva. |
+| `/mi` | cliente | Inicio completo: saludo, aviso de app/notificaciones, próximas citas (máx. 3), “Ver todas”, mis barberos, agregar por código y menú de cuenta. |
+| `/mi/citas` | cliente | Listado completo de citas con estado. |
+| `/mi/citas/:id` | cliente | Detalle: estado, mensaje legible, fecha/hora, barbero, servicios por persona y total. |
+| `/mi/instalar` | cliente | Onboarding de instalación iOS y activación de notificaciones para cliente. |
+| `/mi/seguridad` | cliente | Passkeys: listar, crear con nombre y borrar con confirmación; enlace a cambiar contraseña. |
+| `/mi/nueva-contrasena` | cliente | `PUT /cliente/contrasena`; pide `contrasenaActual` salvo Google fresco (≤ 10 min). |
+| `/b/:codigo` | según sesión | Público: invitación a entrar. Barbero: aviso para cerrar sesión. Cliente: formulario de reserva; la confirmación incluye el bloque de notificaciones. |
 | `/cita/:token` | público | Sin cambios. |
+| `/privacidad` | público | Política de privacidad indexable; enlaces desde login, registro, reserva y `/mi`. |
 | `/` | según sesión | Cliente → `/mi`; barbero → `/app`; sin sesión → `/login`. |
 
-Todas las pantallas heredan el `noindex` global de `index.html`; además,
+- El bloque “Entrar” es solo para barberos con las credenciales que dio el administrador; Google, la recuperación y “Completa tu cuenta de cliente” son exclusivos de clientes.
+- El inicio del cliente no permite cancelar citas: esa acción queda fuera de este alcance.
+- “Mis citas” muestra primero pendientes y próximas aceptadas; el sondeo de 30 s solo corre si hay una cita pendiente y la pestaña está visible.
+
 `src/app/rutas.ts` y `MetaNoIndex` refuerzan `noindex` en `/mi`, `/registro`,
-`/b` y `/cita`.
+`/b`, `/cita` y rutas desconocidas. `/privacidad` es la única ruta indexable;
+`public/robots.txt` permite solo esa ruta.
 
 ## Sesión
 
@@ -64,14 +73,45 @@ de TanStack Query ni `history.state`. El único dato que viaja en la URL es
 - `GET/PATCH /cliente/perfil`
 - `PUT /cliente/contrasena`
 - `GET /cliente/barberos`
+- `POST /cliente/barberos` (agregar por `{ codigo }`)
 - `POST /cliente/barberos/:codigo/citas`
-- `GET /cliente/citas` (solo para el aviso mínimo de solicitud pendiente en `/mi`)
+- `GET /cliente/citas`
+- `GET /cliente/citas/:id` (detalle con `personas`)
+- `GET /cliente/push/llave-publica`
+- `POST /cliente/push/suscripcion`
+- `DELETE /cliente/push/suscripcion`
+- `POST /cliente/passkeys/registro/opciones`
+- `POST /cliente/passkeys/registro/verificar`
+- `GET /cliente/passkeys`
+- `DELETE /cliente/passkeys/:id`
+- `POST /auth/passkey/opciones`
+- `POST /auth/passkey/verificar`
 - Públicos que se mantienen: `GET /public/barberos/:codigo`,
   `GET /public/barberos/:codigo/disponibilidad` y `GET /public/citas/:token`.
 
 La reserva envía `{ fecha, horaInicio, personas }`; nombre, celular y correo
 salen del perfil del cliente. La reserva anónima
 `POST /public/barberos/:codigo/citas` ya no se usa (responde 410).
+
+El detalle de cita usa exactamente el DTO real del backend:
+`{ id, estado, fecha, horaInicio, horaFin, barbero, numPersonas, montoTotal,
+motivos, personas: [{ esTitular, nombreAcompanante, duracionTotalMinutos,
+servicios: [{ nombre, precio, duracionMinutos }] }] }`.
+
+## Inicio del cliente
+
+- `/mi` muestra solo las 3 citas pendientes/próximas; “Ver todas” lleva a
+  `/mi/citas`. El detalle está en `/mi/citas/:id`.
+- Los estados se traducen a texto visible (el color nunca es la única señal):
+  Esperando respuesta, Aceptada, No aceptada, Cancelada, Sin respuesta,
+  Atendida y No asististe.
+- Agregar barbero por código usa `POST /cliente/barberos`; un 404 muestra
+  “No encontramos ese código”.
+- El menú “Cuenta” contiene “Cambiar contraseña” y “Cerrar sesión”. No hay
+  cancelación de citas desde el cliente.
+- El aviso de notificaciones se descarta por cliente durante 7 días en
+  `localStorage`; en la confirmación de reserva se muestra destacado y sin
+  descarte.
 
 ## Cabeceras
 

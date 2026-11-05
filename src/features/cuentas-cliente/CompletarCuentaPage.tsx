@@ -14,6 +14,8 @@ import {
   validarNombrePerfil,
   validarUsername,
 } from './domain/validadores'
+import { EnlacePrivacidad } from '@/features/legal/components/EnlacePrivacidad'
+import { puedeCrearCuenta } from '@/features/legal/domain/aceptacion'
 import { useCompletarCuenta } from './hooks'
 
 type Campo = 'nombre' | 'username' | 'contrasena' | 'celular'
@@ -30,6 +32,7 @@ export function CompletarCuentaPage() {
   const [contrasena, setContrasena] = useState('')
   const [celular, setCelular] = useState('')
   const [mostrarContrasena, setMostrarContrasena] = useState(false)
+  const [aceptaTratamiento, setAceptaTratamiento] = useState(false)
   const [tocados, setTocados] = useState<Record<Campo, boolean>>({
     nombre: false,
     username: false,
@@ -62,6 +65,7 @@ export function CompletarCuentaPage() {
     username.length > 0 &&
     contrasena.length > 0 &&
     celular.length > 0
+  const puedeCrear = puedeCrearCuenta(valido, aceptaTratamiento)
 
   function mostrar(campo: Campo, valor: string): string | undefined {
     const error =
@@ -81,7 +85,7 @@ export function CompletarCuentaPage() {
 
   function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!valido || mutacion.isPending) return
+    if (!puedeCrear || mutacion.isPending) return
     setErrorEnvio(null)
     mutacion.mutate(
       {
@@ -102,9 +106,10 @@ export function CompletarCuentaPage() {
       <div className="mx-auto flex w-full max-w-[420px] flex-col gap-8">
         <header className="flex flex-col gap-4">
           <Logo tamano="sm" />
-          <h1 className="type-public-title">Completa tu cuenta</h1>
+          <h1 className="type-public-title">Completa tu cuenta de cliente</h1>
           <p className="type-form text-secondary">
-            Elige tu usuario y una contraseña para reservar con tu cuenta.
+            Elige tu usuario y una contraseña para reservar con tu cuenta de
+            cliente.
           </p>
         </header>
 
@@ -198,6 +203,30 @@ export function CompletarCuentaPage() {
             placeholder="3001234567"
           />
 
+          <label className="type-small flex min-h-[var(--height-button-compact)] cursor-pointer items-start gap-3 text-secondary">
+            <input
+              type="checkbox"
+              name="aceptaTratamiento"
+              checked={aceptaTratamiento}
+              onChange={(evento) =>
+                setAceptaTratamiento(evento.target.checked)
+              }
+              className="mt-0.5 size-5 shrink-0 accent-accent"
+            />
+            <span>
+              Autorizo el tratamiento de mis datos personales según la{' '}
+              <a
+                href="/privacidad"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(evento) => evento.stopPropagation()}
+                className="underline underline-offset-2 hover:text-text"
+              >
+                Política de privacidad
+              </a>
+            </span>
+          </label>
+
           {errorEnvio && (
             <p
               role="alert"
@@ -210,12 +239,16 @@ export function CompletarCuentaPage() {
           <Button
             type="submit"
             className="mt-2 w-full"
-            disabled={!valido || mutacion.isPending}
+            disabled={!puedeCrear || mutacion.isPending}
             cargando={mutacion.isPending}
           >
-            Crear cuenta
+            Crear cuenta de cliente
           </Button>
         </form>
+
+        <footer className="text-center">
+          <EnlacePrivacidad />
+        </footer>
       </div>
     </main>
   )

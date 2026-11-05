@@ -1,8 +1,9 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useTituloPagina } from '@/app/useTituloPagina'
 import { useAuth } from '@/features/auth/useAuth'
+import { requiereContrasenaActual } from '@/features/auth/sesion'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Logo } from '@/shared/ui/Logo'
@@ -12,13 +13,16 @@ import { validarContrasena } from './domain/validadores'
 import { useCambiarContrasena } from './hooks'
 
 export function NuevaContrasenaPage() {
-  const { usuario } = useAuth()
+  const { usuario, sesion, metodo } = useAuth()
   useTituloPagina()
   const navegar = useNavigate()
   const { mostrarToast } = useToast()
   const [contrasena, setContrasena] = useState('')
+  const [actual, setActual] = useState('')
   const [mostrar, setMostrar] = useState(false)
+  const [mostrarActual, setMostrarActual] = useState(false)
   const [tocada, setTocada] = useState(false)
+  const [tocadaActual, setTocadaActual] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const mutacion = useCambiarContrasena()
 
@@ -32,15 +36,24 @@ export function NuevaContrasenaPage() {
     )
   }
 
+  const pideActual = sesion ? requiereContrasenaActual(sesion.token) : true
+  const esPasskey = metodo === 'passkey'
   const errorCampo = validarContrasena(contrasena, usuario.username)
-  const valido = contrasena.length > 0 && !errorCampo
+  const errorActual =
+    pideActual && actual.length === 0
+      ? 'Escribe tu contraseña actual.'
+      : null
+  const valido = contrasena.length > 0 && !errorCampo && !errorActual
 
   function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     if (!valido || mutacion.isPending) return
     setErrorEnvio(null)
     mutacion.mutate(
-      { nuevaContrasena: contrasena },
+      {
+        nuevaContrasena: contrasena,
+        ...(pideActual ? { contrasenaActual: actual } : {}),
+      },
       {
         onSuccess: () => {
           mostrarToast({ mensaje: 'Contraseña actualizada.' })
@@ -58,11 +71,52 @@ export function NuevaContrasenaPage() {
           <Logo tamano="sm" />
           <h1 className="type-public-title">Nueva contraseña</h1>
           <p className="type-form text-secondary">
-            Crea una contraseña para entrar sin depender de Google.
+            {esPasskey
+              ? 'Define una contraseña de respaldo para cuando no puedas usar tu passkey.'
+              : 'Crea una contraseña para entrar sin depender de Google.'}
           </p>
         </header>
 
         <form onSubmit={enviar} className="flex flex-col gap-5" noValidate>
+          {pideActual && (
+            <Input
+              id="contrasena-actual"
+              etiqueta="Contraseña actual"
+              name="contrasenaActual"
+              type={mostrarActual ? 'text' : 'password'}
+              value={actual}
+              onChange={(evento) => {
+                setActual(evento.target.value)
+                setErrorEnvio(null)
+              }}
+              onBlur={() => setTocadaActual(true)}
+              error={
+                tocadaActual && errorActual ? errorActual : undefined
+              }
+              autoComplete="current-password"
+              placeholder="Tu contraseña actual"
+              accionDerecha={
+                <button
+                  type="button"
+                  aria-label={
+                    mostrarActual ? 'Ocultar contraseña' : 'Mostrar contraseña'
+                  }
+                  aria-pressed={mostrarActual}
+                  aria-controls="contrasena-actual"
+                  onMouseDown={(evento) => evento.preventDefault()}
+                  onClick={() => setMostrarActual((visible) => !visible)}
+                  className="inline-flex size-[var(--height-button-compact)] items-center justify-center rounded-[var(--radius-button-card)] text-secondary transition-colors hover:bg-white-5 hover:text-text"
+                >
+                  {mostrarActual ? (
+                    <EyeOff aria-hidden="true" size={18} strokeWidth={1.6} />
+                  ) : (
+                    <Eye aria-hidden="true" size={18} strokeWidth={1.6} />
+                  )}
+                </button>
+              }
+            />
+          )}
+
           <Input
             id="nueva-contrasena"
             etiqueta="Nueva contraseña"
@@ -96,6 +150,26 @@ export function NuevaContrasenaPage() {
               </button>
             }
           />
+
+          {esPasskey && (
+            <p className="type-helper">
+              ¿Olvidaste tu contraseña actual? Entra con Google desde{' '}
+              <Link
+                to="/login?recuperar=1"
+                className="underline underline-offset-2 hover:text-text"
+              >
+                /login?recuperar=1
+              </Link>
+              .
+            </p>
+          )}
+
+          {!pideActual && metodo === 'google' && (
+            <p className="type-helper">
+              Tu sesión de Google es reciente; puedes crear la contraseña sin
+              escribir la actual.
+            </p>
+          )}
 
           {errorEnvio && (
             <p
