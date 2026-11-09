@@ -24,6 +24,8 @@ export interface CrearCitaClienteBody {
   fecha: string
   horaInicio: string
   personas: PersonaCitaCliente[]
+  /** Consentimiento explícito para recordatorios por WhatsApp (por defecto false). */
+  aceptaWhatsapp?: boolean
 }
 
 export interface MotivosCitaCliente {

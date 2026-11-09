@@ -31,6 +31,7 @@ import { Segmented } from '@/shared/ui/Segmented'
 import { Sheet } from '@/shared/ui/Sheet'
 import { Skeleton } from '@/shared/ui/Skeleton'
 import { guardarCitaCliente } from './almacenamientoCitas'
+import { CasillaWhatsapp } from './components/CasillaWhatsapp'
 import { DiaSelector } from './components/DiaSelector'
 import { SelectorServiciosAcompanante } from './components/SelectorServiciosAcompanante'
 import { SlotButton } from './components/SlotButton'
@@ -336,6 +337,8 @@ function FormularioReserva({
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const [citaCreada, setCitaCreada] = useState<CitaCreada | null>(null)
   const [sheetAbierto, setSheetAbierto] = useState(false)
+  // Consentimiento explícito: siempre parte desmarcado y no se persiste.
+  const [aceptaWhatsapp, setAceptaWhatsapp] = useState(false)
   const [nombrePerfil, setNombrePerfil] = useState(cliente.nombre)
   const [celularPerfil, setCelularPerfil] = useState(cliente.celular)
   const [tocadosPerfil, setTocadosPerfil] = useState({
@@ -402,6 +405,7 @@ function FormularioReserva({
     const cuerpo = construirCuerpoCitaCliente(
       { ...form, horaInicio: horaEfectiva },
       barbero.servicios,
+      aceptaWhatsapp,
     )
     if (!cuerpo) return
 
@@ -665,6 +669,12 @@ function FormularioReserva({
                     </>
                   )}
                 </section>
+
+                <CasillaWhatsapp
+                  celular={cliente.celular}
+                  acepta={aceptaWhatsapp}
+                  onCambio={setAceptaWhatsapp}
+                />
 
                 {errorEnvio && (
                   <p

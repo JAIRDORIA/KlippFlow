@@ -44,17 +44,29 @@ describe('reserva con sesión de cliente', () => {
     expect(esFormularioClienteValido(estado, SERVICIOS)).toBe(true)
   })
 
-  it('construye solo fecha, hora y personas', () => {
+  it('construye fecha, hora, personas y el consentimiento por defecto', () => {
     const cuerpo = construirCuerpoCitaCliente(estadoBase(), SERVICIOS)
 
     expect(cuerpo).toEqual({
       fecha: '2026-11-04',
       horaInicio: '10:00',
       personas: [{ servicioIds: [1] }],
+      aceptaWhatsapp: false,
     })
     expect(cuerpo).not.toHaveProperty('nombre')
     expect(cuerpo).not.toHaveProperty('celular')
     expect(cuerpo).not.toHaveProperty('correo')
+  })
+
+  it('envía aceptaWhatsapp true y false de forma explícita', () => {
+    const estado = estadoBase()
+
+    expect(construirCuerpoCitaCliente(estado, SERVICIOS, true)).toMatchObject({
+      aceptaWhatsapp: true,
+    })
+    expect(construirCuerpoCitaCliente(estado, SERVICIOS, false)).toMatchObject({
+      aceptaWhatsapp: false,
+    })
   })
 
   it('incluye acompañantes y rechaza horas vacías', () => {

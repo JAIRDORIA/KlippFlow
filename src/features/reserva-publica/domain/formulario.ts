@@ -299,10 +299,12 @@ export function construirCuerpoCrearCita(
 /**
  * Cuerpo documentado para POST /cliente/barberos/:codigo/citas.
  * El nombre, celular y correo salen del perfil autenticado.
+ * `aceptaWhatsapp` es el consentimiento explícito y va siempre (false por defecto).
  */
 export function construirCuerpoCitaCliente(
   estado: EstadoFormularioReserva,
   catalogo: readonly ServicioPublico[],
+  aceptaWhatsapp = false,
 ): CrearCitaClienteBody | null {
   if (!esFormularioClienteValido(estado, catalogo) || !estado.horaInicio) {
     return null
@@ -312,5 +314,6 @@ export function construirCuerpoCitaCliente(
     fecha: estado.fecha,
     horaInicio: estado.horaInicio,
     personas: personasDelFormulario(estado),
+    aceptaWhatsapp,
   }
 }

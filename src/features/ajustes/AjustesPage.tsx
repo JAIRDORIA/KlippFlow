@@ -9,6 +9,7 @@ import { Sheet } from '@/shared/ui/Sheet'
 import { SeccionHorarios } from './components/SeccionHorarios'
 import { SeccionServicios } from './components/SeccionServicios'
 import { TarjetaLink } from './components/TarjetaLink'
+import { TarjetaWhatsapp } from './components/TarjetaWhatsapp'
 
 /** Pantalla Ajustes (`/app/ajustes`), como DISENO.md 6.9. */
 export function AjustesPage() {
@@ -50,6 +51,7 @@ export function AjustesPage() {
       <SeccionServicios />
       <SeccionHorarios />
       <TarjetaNotificaciones />
+      <TarjetaWhatsapp />
 
       <section className="mt-9 pb-4">
         <Button

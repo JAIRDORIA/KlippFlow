@@ -9,7 +9,7 @@ import { ErrorPeticion } from '@/shared/api/client'
  * - 409: solo en horarios, `El horario se cruza con otro bloque de ese día`.
  */
 
-export type AccionAjustes = 'servicio' | 'horario'
+export type AccionAjustes = 'servicio' | 'horario' | 'whatsapp'
 
 export interface ErrorAjustes {
   mensaje: string
@@ -44,9 +44,14 @@ export function mensajeDeErrorAjustes(
   }
 
   if (status === 404) {
+    const respaldo =
+      accion === 'horario'
+        ? 'Horario no encontrado'
+        : accion === 'whatsapp'
+          ? 'Barbero no encontrado'
+          : 'Servicio no encontrado'
     return {
-      mensaje:
-        texto || (accion === 'horario' ? 'Horario no encontrado' : 'Servicio no encontrado'),
+      mensaje: texto || respaldo,
       refrescar: true,
     }
   }

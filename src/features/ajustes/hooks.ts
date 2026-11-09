@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ErrorPeticion } from '@/shared/api/client'
 import { clavesConsulta } from '@/features/agenda/claves'
 import {
+  actualizarWhatsapp,
   editarServicio,
   crearHorario,
   crearServicio,
@@ -17,9 +18,12 @@ import {
 import { clavesAjustes } from './claves'
 import { planificarGuardado, type DiaBorrador } from './domain/horarios'
 import type {
+  ActualizarWhatsappBody,
+  Configuracion,
   CrearServicioBody,
   EditarServicioBody,
   Horario,
+  RespuestaWhatsapp,
   Servicio,
 } from './types'
 
@@ -43,6 +47,29 @@ export function useConfiguracion() {
     queryFn: obtenerConfiguracion,
     staleTime: 5 * 60_000,
     retry: reintentar,
+  })
+}
+
+/**
+ * Guarda el consentimiento de WhatsApp del barbero. La respuesta trae el
+ * `whatsapp` normalizado, así que se adelanta la caché y además se invalida la
+ * configuración para que el link y la tarjeta queden coherentes.
+ */
+export function useActualizarWhatsapp() {
+  const queryClient = useQueryClient()
+
+  return useMutation<RespuestaWhatsapp, unknown, ActualizarWhatsappBody>({
+    mutationFn: actualizarWhatsapp,
+    onSuccess: (respuesta) => {
+      queryClient.setQueryData<Configuracion>(
+        clavesAjustes.configuracion,
+        (actual) =>
+          actual ? { ...actual, whatsapp: respuesta.whatsapp } : actual,
+      )
+      void queryClient.invalidateQueries({
+        queryKey: clavesAjustes.configuracion,
+      })
+    },
   })
 }
 

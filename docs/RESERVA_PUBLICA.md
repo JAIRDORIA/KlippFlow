@@ -1,6 +1,7 @@
 # Reserva pública y seguimiento
 
-Última actualización: **2026-10-30** (Prompt 2 del frontend).
+Última actualización: **2026-11-09** (Prompt 10: consentimiento de recordatorios
+por WhatsApp en la reserva con sesión).
 
 Implementación de la reserva sin cuenta para clientes y del seguimiento por token.
 Fuente de contrato: `docs/backend/PUBLICO_INFO_Y_DISPONIBILIDAD.md` y
@@ -70,6 +71,26 @@ lleva a `/b/{codigo}` si el código está en el navegador; si no, a `/b`.
 - Se envía normalizado a 10 dígitos: `+57 300 123 4567` → `3001234567`.
 - Correo: opcional. Vacío es válido; si se escribe debe tener formato básico de
   email. Se omite del cuerpo si está vacío.
+
+### Consentimiento de WhatsApp (reserva con sesión)
+
+Desde el Prompt 10, la reserva con sesión de cliente
+(`POST /cliente/barberos/:codigo/citas`) acepta el campo opcional booleano
+`aceptaWhatsapp` (por defecto `false`). La UI lo captura con
+`components/CasillaWhatsapp.tsx`:
+
+- Casilla **desmarcada por defecto**: el consentimiento es explícito.
+- Solo se muestra si el celular del perfil autenticado normaliza a 10 dígitos.
+  Si no hay celular, no se renderiza nada; el backend toma el celular del perfil.
+- El texto visible es “Quiero recibir recordatorios de mi cita por WhatsApp.
+  Puedo darme de baja cuando quiera respondiendo BAJA.” y debajo se muestra el
+  celular del perfil en formato `300 111 2233`.
+- `aceptaWhatsapp` se envía **siempre** como `true` o `false` en el cuerpo; no se
+  guarda en `localStorage` ni se deduce de reservas anteriores.
+- Un `400` sobre este campo usa el mensaje de la API, igual que el resto de
+  errores de creación (ver mapa de errores).
+- El enlace a `/privacidad` se mantiene en el pie del formulario, como en el
+  resto de la reserva.
 
 ### Cuerpo del POST
 
