@@ -18,3 +18,13 @@ export function normalizarCelular(valor: string): string | null {
 export function celularValido(valor: string): boolean {
   return normalizarCelular(valor) !== null
 }
+
+/**
+ * Presentación legible del celular del perfil: `3001112233` → `300 111 2233`.
+ * Devuelve `null` si el valor no normaliza (así la casilla no se muestra).
+ */
+export function formatearCelularVisible(valor: string): string | null {
+  const normalizado = normalizarCelular(valor)
+  if (!normalizado) return null
+  return `${normalizado.slice(0, 3)} ${normalizado.slice(3, 6)} ${normalizado.slice(6)}`
+}

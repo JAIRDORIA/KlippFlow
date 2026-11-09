@@ -1,21 +1,35 @@
 import { peticion } from '@/shared/api/client'
 import type {
+  ActualizarWhatsappBody,
   Configuracion,
   CrearHorarioBody,
   CrearServicioBody,
   EditarHorarioBody,
   EditarServicioBody,
   Horario,
+  RespuestaWhatsapp,
   Servicio,
 } from './types'
 
 /**
  * Endpoints de Ajustes.
- * Fuente: `docs/backend/SERVICIOS.md` y `HORARIOS_Y_CONFIGURACION.md`.
+ * Fuente: `docs/backend/SERVICIOS.md`, `HORARIOS_Y_CONFIGURACION.md` y
+ * `WHATSAPP_BASE.md`.
  */
 
 export function obtenerConfiguracion(): Promise<Configuracion> {
   return peticion<Configuracion>('/barbero/configuracion', { zona: 'barbero' })
+}
+
+/** Consentimiento del barbero: activa o desactiva sus recordatorios. */
+export function actualizarWhatsapp(
+  cuerpo: ActualizarWhatsappBody,
+): Promise<RespuestaWhatsapp> {
+  return peticion<RespuestaWhatsapp>('/barbero/configuracion/whatsapp', {
+    metodo: 'PUT',
+    cuerpo,
+    zona: 'barbero',
+  })
 }
 
 /** Siempre incluye los inactivos: la pantalla los muestra atenuados. */

@@ -1,11 +1,13 @@
 # Ajustes — link público, servicios, horarios y cerrar sesión
 
 Prompt 5 del frontend. Implementa la pantalla **Ajustes** (`/app/ajustes`).
+Prompt 10 agrega la tarjeta **Recordatorios por WhatsApp** (§10).
 
 Fuentes de verdad:
 
 - `docs/backend/SERVICIOS.md`
 - `docs/backend/HORARIOS_Y_CONFIGURACION.md`
+- `docs/backend/WHATSAPP_BASE.md`
 - `docs/DISENO.md` 6.9 y 4
 - `PROJECT_CONTEXT.md`
 
@@ -26,6 +28,7 @@ src/features/ajustes/
   AjustesPage.tsx           /app/ajustes
   components/
     TarjetaLink.tsx         link público + Copiar + Ver como cliente
+    TarjetaWhatsapp.tsx     celular y consentimiento de recordatorios
     BotonEnlace.tsx         <a> con la apariencia del botón ghost
     SeccionServicios.tsx    lista con activos e inactivos
     SheetServicio.tsx       nuevo / editar / desactivar / reactivar
@@ -35,6 +38,7 @@ src/features/ajustes/
     horas.ts                formatos 12/24 h, bloques, solapes
     servicios.ts            validación y presentación
     horarios.ts             filas, borradores, validación y plan de guardado
+    whatsapp.ts             validación y cuerpo del PUT de WhatsApp
     errores.ts              mapa de errores
     portapapeles.ts         copiar con respaldo
     *.test.ts
@@ -53,6 +57,7 @@ clavesAjustes.horarios     = ['barbero', 'horarios']
 | Mutación | Invalida |
 |---|---|
 | Crear / editar / desactivar / reactivar servicio | `servicios` |
+| Guardar WhatsApp | `configuracion` (y adelanta la caché con la respuesta) |
 | Guardar un día de horarios | `horarios` **y** `['barbero','dashboard','hoy']` |
 
 - El dashboard se invalida porque `bloquesDeTrabajo` y `huecosLibres` salen de
@@ -193,7 +198,7 @@ Así, al entrar con otro barbero no hay datos ni link del anterior.
 | 400 | Mensaje de la API (o `campos[0]`) | No |
 | 401 | "Tu sesión expiró. Vuelve a iniciar sesión." (el cliente redirige) | No |
 | 403 | Mensaje de la API o "No tienes permiso para esta acción." | No |
-| 404 | `Servicio no encontrado` / `Horario no encontrado` | Sí |
+| 404 | `Servicio no encontrado` / `Horario no encontrado` / `Barbero no encontrado` | Sí |
 | 409 | Mensaje de la API o `El horario se cruza con otro bloque de ese día` | Sí |
 | 429 | "Demasiados intentos, espera un momento." | No |
 | 5xx | "Algo salió mal. Inténtalo de nuevo." | Sí |
@@ -299,3 +304,59 @@ SELECT id, dia_semana, hora_inicio, hora_fin, activo
 | m | Revisar con barbero1 que no aparece nada de barbero2 (y al revés). | Aislamiento total: los endpoints filtran por el JWT. |
 | n | Revisar a 390 px, el selector de hora en iPhone y la navegación con teclado. | Sin scroll horizontal, objetivos ≥ 40 px, foco atrapado en los sheets, Esc y retorno del foco. |
 | o | `git status` y búsqueda de `#hex`. | Sin `.env`, `node_modules` ni `dist`; ningún hex fuera de `tokens.css`. |
+
+---
+
+## 10. Recordatorios por WhatsApp (Prompt 10)
+
+Tarjeta **Recordatorios por WhatsApp** de `/app/ajustes`
+(`components/TarjetaWhatsapp.tsx`). Fuente:
+`docs/backend/WHATSAPP_BASE.md` §6.1.
+
+### Contrato
+
+| Operación | Endpoint | Cuerpo / respuesta |
+|---|---|---|
+| Leer | `GET /barbero/configuracion` | incluye `whatsapp: { celular: string \| null, activo: boolean }` |
+| Guardar | `PUT /barbero/configuracion/whatsapp` | `{ celular?: string, activo: boolean }` → `{ whatsapp }` |
+
+- `barberoId` **nunca** se envía: sale del JWT.
+- `celular` acepta `+57`, espacios y guiones; se normaliza a 10 dígitos
+  (`^3\d{9}$`) con la misma función de la reserva pública
+  (`features/reserva-publica/domain/celular.ts`), sin duplicar lógica.
+- `activo: true` exige celular válido en el mismo guardado. La UI **no deja
+  encender el interruptor** sin un celular válido y muestra el motivo.
+- **Discrepancia con el enunciado, manda el backend:** el cuerpo documentado
+  admite `celular` opcional. Al apagar con el campo vacío se envía solo
+  `{ activo: false }` para conservar el número guardado; enviar `celular: ''`
+  respondería 400.
+- Si el celular guardado existe, el campo se precarga; si es `null`, queda vacío
+  y el interruptor apagado.
+- El PUT exitoso muestra el toast “Recordatorios por WhatsApp guardados.” y
+  adelanta la caché de `['barbero','configuracion']` con la respuesta; además
+  invalida esa clave.
+- Estados de carga y error con `Skeleton` y `EstadoError`; un error de guardado
+  usa el mensaje de la API (400/404) o el mapa común de Ajustes.
+
+### Validación local
+
+`domain/whatsapp.ts` (puro y con pruebas):
+
+- `validarWhatsapp(celular, activo)` → `{ celular?, activo? }`.
+- `puedeActivarWhatsapp(celular)` → la normalización de la reserva pública.
+- `construirCuerpoWhatsapp(celular, activo)` → cuerpo exacto del PUT o `null` si
+  no se puede guardar.
+- Pruebas: válido, `+57`, espacios, inválido, activar sin celular, cuerpo al
+  activar/desactivar, omisión del celular vacío al apagar.
+
+### Prueba manual
+
+1. Entrar como barbero con `whatsapp.celular = null`.
+2. La tarjeta muestra el campo vacío y el interruptor apagado.
+3. Intentar encender el interruptor sin celular: aparece el motivo y el
+   interruptor sigue apagado.
+4. Escribir `+57 300 111 2233`, encender y guardar: toast, y al recargar el
+   campo se precarga normalizado (`3001112233`) con el interruptor encendido.
+5. Borrar el celular, apagar y guardar: el backend conserva el número y el
+   siguiente GET lo devuelve.
+

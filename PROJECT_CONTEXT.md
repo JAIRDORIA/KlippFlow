@@ -1,7 +1,7 @@
 # PROJECT_CONTEXT — Frontend KlippFlow
 
-Última actualización: **2026-11-02** (Prompt 9: correcciones post-despliegue de
-logo y badge de notificación).
+Última actualización: **2026-11-09** (Prompt 10: recordatorios por WhatsApp en
+la reserva del cliente y en Ajustes del barbero).
 
 ## 1. Qué es
 
@@ -144,12 +144,28 @@ Completado:
     El SW usa `icon: '/icons/icon-192.png'` y `badge: '/icons/badge-96.png'`.
   - Pruebas nuevas de `Logo` (ruta absoluta, relleno en px, respaldo) y de
     `construirOpcionesNotificacion` (rutas absolutas, URL segura).
+- Recordatorios por WhatsApp (Prompt 10, 2026-11-09):
+  - Reserva con sesión: casilla de consentimiento explícito
+    (`CasillaWhatsapp`) desmarcada por defecto, visible solo si el celular del
+    perfil normaliza a 10 dígitos. Muestra el celular en formato `300 111 2233`.
+  - `POST /cliente/barberos/:codigo/citas` envía siempre
+    `aceptaWhatsapp: true | false`; no se persiste en `localStorage`.
+  - Ajustes: tarjeta “Recordatorios por WhatsApp” con celular, interruptor y
+    “Guardar”; `PUT /barbero/configuracion/whatsapp` e invalidación de
+    `['barbero','configuracion']`.
+  - Validación y cuerpo del PUT en `features/ajustes/domain/whatsapp.ts`,
+    reutilizando `normalizarCelular` de la reserva pública.
+  - Pruebas de dominio, cuerpo del PUT, `aceptaWhatsapp` y visibilidad de la
+    casilla sin celular de perfil.
+  - `docs/RESERVA_PUBLICA.md` y `docs/AJUSTES.md` actualizados.
 
 No implementado todavía:
 
 - "Enviar prueba" de notificaciones (`POST /barbero/push/probar`).
-- Pagos, verificación de celular y recordatorios (fuera de alcance de estos
-  prompts).
+- Pagos y verificación de celular (fuera de alcance de estos prompts).
+- Recordatorios por WhatsApp del lado del **envío**: el frontend ya captura el
+  consentimiento y lo configura, pero la programación y el envío viven en el
+  backend (`docs/backend/WHATSAPP_BASE.md`).
 
 ## 4. Estructura
 
@@ -195,7 +211,8 @@ src/
     SeguimientoPage.tsx        /cita/:token; estados y copia del enlace
     api.ts / hooks.ts          TanStack Query y polling
     almacenamientoCitas.ts     klippflow.citasCliente
-    components/                días, slots, servicios y acompañantes
+    components/                días, slots, servicios, acompañantes y
+                               CasillaWhatsapp (consentimiento explícito)
     domain/                    totales, celular, correo, días, formulario,
                                estados y errores + pruebas
   features/agenda/
@@ -226,12 +243,14 @@ src/
     components/                sheet de edición con confirmación
     domain/                    validación y errores + pruebas
   features/ajustes/
-    types.ts                   Configuracion, Servicio, Horario
-    api.ts / claves.ts         configuracion, servicios y horarios
-    hooks.ts                   useConfiguracion/Servicios/Horarios + mutaciones
+    types.ts                   Configuracion (incluye whatsapp), Servicio, Horario
+    api.ts / claves.ts         configuracion, servicios, horarios y WhatsApp
+    hooks.ts                   useConfiguracion/Servicios/Horarios + mutaciones,
+                               useActualizarWhatsapp
     AjustesPage.tsx            /app/ajustes
-    components/                link, servicios, horarios y sheets
-    domain/                    horas, servicios, horarios, errores y
+    components/                link, servicios, horarios, sheets y
+                               TarjetaWhatsapp
+    domain/                    horas, servicios, horarios, whatsapp, errores y
                                portapapeles + pruebas
   features/notificaciones/
     types.ts / api.ts          estados, llave VAPID y suscripciones
@@ -272,7 +291,7 @@ src/
 | `/app/solicitudes` | barbero | Real: orden por urgencia, cuenta regresiva y aceptar/rechazar. |
 | `/app/cuentas` | barbero | Real: tarjeta financiera, gráfico de 30 días y lista de días. |
 | `/app/compras` | barbero | Real: formulario, lista de hoy y sheet de edición. |
-| `/app/ajustes` | barbero | Real: link, servicios, horarios y cerrar sesión. |
+| `/app/ajustes` | barbero | Real: link, servicios, horarios, notificaciones, recordatorios por WhatsApp y cerrar sesión. |
 | `/mi` | cliente | Real: inicio con citas próximas, barberos, aviso de app y menú de cuenta. |
 | `/mi/citas` | cliente | Real: listado completo de citas. |
 | `/mi/citas/:id` | cliente | Real: detalle con servicios por persona. |
@@ -612,6 +631,38 @@ separados. `/app/*` exige sesión de barbero y `/mi/*` exige sesión de cliente.
   `SKIP_WAITING`; añadir `skipWaiting()` automático habría recargado la app.
 - **iOS:** ignora `badge`; usa el ícono grande y `apple-touch-icon.png`.
 
+### Decisiones del Prompt 10 (recordatorios por WhatsApp)
+
+- **Consentimiento explícito y efímero:** `aceptaWhatsapp` nace `false` en cada
+  visita. No se guarda en `localStorage` ni se reutiliza de una reserva
+  anterior; solo viaja en el POST de esa cita.
+- **La casilla depende del perfil:** se muestra solo si el celular de la sesión
+  del cliente normaliza a 10 dígitos. No se inventa un celular ni se pide uno
+  nuevo en la reserva; el backend lo toma del perfil.
+- **Un solo texto, sin duplicar:** el cuerpo del POST siempre incluye
+  `aceptaWhatsapp` (`true`/`false`). El constructor
+  `construirCuerpoCitaCliente` tiene `false` por defecto para que la prueba y los
+  usos previos sigan siendo explícitos.
+- **Discrepancia con el enunciado del Prompt 10:** se dijo que el PUT recibe
+  `{ celular: string, activo: boolean }`, pero `WHATSAPP_BASE.md` §6.1 y el DTO
+  real (`ActualizarWhatsappDto`) hacen `celular` **opcional**. Manda el backend:
+  al apagar con el campo vacío se envía `{ activo: false }` y se conserva el
+  número; una cadena vacía o inválida respondería 400. El tipo del frontend
+  refleja `celular?: string`.
+- **Validación compartida:** la tarjeta de Ajustes importa
+  `normalizarCelular`/`celularValido` desde
+  `features/reserva-publica/domain/celular.ts`; no hay una segunda regex.
+  `domain/whatsapp.ts` solo agrega las reglas de activación y el cuerpo del PUT.
+- **Interruptor bloqueado, no solo validado al guardar:** si no hay celular
+  válido, el interruptor no cambia de estado y muestra el motivo con
+  `role="alert"`. El botón “Guardar” también queda deshabilitado sin cuerpo.
+- **Caché:** `useActualizarWhatsapp` hace `setQueryData` con el `whatsapp`
+  normalizado que devuelve el PUT y además invalida
+  `['barbero','configuracion']`, compartida con `TarjetaLink`.
+- **Errores:** el 404 de WhatsApp se mapea a “Barbero no encontrado” dentro del
+  mapa común de Ajustes; 400/403 usan el mensaje de la API y 401/403 de sesión
+  siguen el comportamiento del cliente HTTP.
+
 ## 10. Verificación
 
 Comandos obligatorios:
@@ -625,9 +676,10 @@ pnpm build
 pnpm dev      # http://localhost:3001
 ```
 
-Comprobado en este prompt:
+Comprobado en el Prompt 10 (y se conserva lo verificado antes):
 
-- 49 archivos de prueba, 427 pruebas, en verde (TZ por defecto).
+- 61 archivos de prueba, 517 pruebas, en verde con TZ por defecto, `TZ=UTC` y
+  `TZ=Asia/Tokyo`.
 - TypeScript y ESLint sin errores.
 - Build de producción correcto: `dist/` con `index.html`,
   `manifest.webmanifest`, `robots.txt`, `sw.js` e `icons/` (incluye
@@ -644,8 +696,15 @@ Comprobado en este prompt:
   `maskable` en una entrada aparte.
 - Sin hex fuera de `tokens.css` (solo el theme-color del manifest y de
   `index.html`, con el comentario que indica su token de origen).
-- Pruebas nuevas del Prompt 9: `src/shared/ui/Logo.test.tsx` (ruta absoluta,
-  relleno en px, respaldo) y
+- Pruebas nuevas del Prompt 10:
+  `src/features/ajustes/domain/whatsapp.test.ts` (validación con válido, `+57`,
+  espacios, inválido y activar sin celular; cuerpo del PUT),
+  `src/features/reserva-publica/components/CasillaWhatsapp.test.tsx`
+  (oculta sin celular, desmarcada, texto y cambio) y
+  `formulario-cliente.test.ts` (`aceptaWhatsapp` `true`, `false` y `false` por
+  defecto).
+- Pruebas del Prompt 9 (siguen en verde): `src/shared/ui/Logo.test.tsx` (ruta
+  absoluta, relleno en px, respaldo) y
   `src/features/notificaciones/domain/notificacion.test.ts` (rutas absolutas
   del ícono y el badge, URL segura del clic).
 - Lo visual (Lighthouse, instalación, iPhone real, badge en Android y el flujo
