@@ -8,6 +8,8 @@ import {
   marcarAtendido,
   marcarNoAsistio,
   obtenerDashboardHoy,
+  obtenerDisponibilidadCambioHora,
+  proponerCambioHora,
   rechazarSolicitud,
 } from './api'
 import { PREFIJO_BARBERO, clavesConsulta } from './claves'
@@ -134,6 +136,50 @@ export function useCorregirPropina() {
   return useMutation({
     mutationFn: ({ id, montoPropina }: VariablesPropina) =>
       corregirPropina(id, montoPropina),
+    onSuccess: invalidar,
+    onError: (error) => {
+      if (esCambioDeEstado(error)) invalidar()
+    },
+  })
+}
+
+const PATRON_FECHA = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Slots para reprogramar una cita. Solo se consulta con el Sheet abierto y una
+ * fecha válida; la semántica verde/naranja/rojo es la misma de la reserva
+ * pública, así que se reutiliza tal cual.
+ */
+export function useDisponibilidadCambioHora(
+  id: number,
+  fecha: string,
+  habilitada = true,
+) {
+  return useQuery({
+    queryKey: clavesConsulta.disponibilidadCambioHora(id, fecha),
+    queryFn: () => obtenerDisponibilidadCambioHora(id, fecha),
+    enabled:
+      habilitada &&
+      Number.isInteger(id) &&
+      id > 0 &&
+      PATRON_FECHA.test(fecha),
+    staleTime: 20_000,
+    refetchOnWindowFocus: false,
+    retry: reintentar,
+  })
+}
+
+export interface VariablesProponerHora {
+  id: number
+  fecha: string
+  horaInicio: string
+}
+
+export function useProponerCambioHora() {
+  const invalidar = useInvalidarAgenda()
+  return useMutation({
+    mutationFn: ({ id, fecha, horaInicio }: VariablesProponerHora) =>
+      proponerCambioHora(id, { fecha, horaInicio }),
     onSuccess: invalidar,
     onError: (error) => {
       if (esCambioDeEstado(error)) invalidar()

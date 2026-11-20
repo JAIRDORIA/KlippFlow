@@ -16,6 +16,7 @@ import type {
 } from '@/features/auth/types'
 import { ErrorPeticion } from '@/shared/api/client'
 import {
+  aceptarCambioHora,
   actualizarPerfil,
   cambiarContrasena,
   completarCuenta,
@@ -26,6 +27,7 @@ import {
   obtenerCitaCliente,
   obtenerCitasCliente,
   obtenerPerfil,
+  rechazarCambioHora,
   vincularBarbero,
 } from './api'
 import type {
@@ -48,6 +50,13 @@ function pestanaVisible(): boolean {
 
 function hayPendiente(citas: readonly { estado: string }[] | undefined): boolean {
   return citas?.some((cita) => cita.estado === 'pendiente') ?? false
+}
+
+/** Una propuesta vigente también necesita refresco: puede expirar o responderse. */
+function hayPropuesta(
+  citas: readonly { propuestaCambioHora?: unknown }[] | undefined,
+): boolean {
+  return citas?.some((cita) => Boolean(cita.propuestaCambioHora)) ?? false
 }
 
 function reintentar(intentos: number, error: unknown): boolean {
@@ -151,7 +160,8 @@ export function useCitasCliente() {
     refetchIntervalInBackground: false,
     refetchInterval: (consulta) => {
       if (!pestanaVisible()) return false
-      return hayPendiente(consulta.state.data) ? 30_000 : false
+      const datos = consulta.state.data
+      return hayPendiente(datos) || hayPropuesta(datos) ? 30_000 : false
     },
   })
 }
@@ -169,9 +179,48 @@ export function useCitaCliente(id: number, habilitada = true) {
     refetchIntervalInBackground: false,
     refetchInterval: (consulta) => {
       if (!pestanaVisible()) return false
-      return consulta.state.data?.estado === 'pendiente' ? 30_000 : false
+      const cita = consulta.state.data
+      return cita?.estado === 'pendiente' || Boolean(cita?.propuestaCambioHora)
+        ? 30_000
+        : false
     },
   })
+}
+
+/**
+ * Aceptar y rechazar responden con el detalle actualizado: se escribe en la
+ * caché del detalle y se invalida el listado. Un 404/409 significa que la
+ * propuesta ya no está vigente, así que también hay que volver a leer.
+ */
+function useCambioHora(
+  mutacion: (id: number) => Promise<CitaClienteDetalle>,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation<CitaClienteDetalle, unknown, number>({
+    mutationFn: mutacion,
+    onSuccess: (cita) => {
+      queryClient.setQueryData(clavesCliente.cita(cita.id), cita)
+      void queryClient.invalidateQueries({ queryKey: clavesCliente.citas })
+    },
+    onError: (error, id) => {
+      if (
+        error instanceof ErrorPeticion &&
+        (error.status === 404 || error.status === 409)
+      ) {
+        void queryClient.invalidateQueries({ queryKey: clavesCliente.cita(id) })
+        void queryClient.invalidateQueries({ queryKey: clavesCliente.citas })
+      }
+    },
+  })
+}
+
+export function useAceptarCambioHora() {
+  return useCambioHora(aceptarCambioHora)
+}
+
+export function useRechazarCambioHora() {
+  return useCambioHora(rechazarCambioHora)
 }
 
 export function useAgregarBarberoCliente() {

@@ -147,7 +147,11 @@ Cada tarjeta:
   24 px, flecha y hora de fin, más los servicios.
 - Si `numPersonas > 1`: "N personas" con el detalle de cada acompañante.
 - Bloque ámbar con `avisoDescanso` cuando existe.
-- `Rechazar` (ghost, abre el sheet) y `Aceptar` (principal, directo).
+- `Rechazar` (ghost, abre el sheet), `Aceptar` (principal, directo) y, debajo,
+  `Proponer otra hora` (ghost; cambia a `Cambiar la propuesta` si ya hay una).
+- Si hay `propuestaCambioHora`, bloque ámbar “NUEVA HORA PROPUESTA” con el
+  horario propuesto, “Esperando respuesta · expira en …” y (cuando llega)
+  “Avisar por WhatsApp”. Ver `docs/CAMBIO_HORA_FRONT.md`.
 
 Cuando la cuenta regresiva llega a 0 la tarjeta se desactiva y se refresca la
 lista (con un enfriamiento de 10 s para no entrar en bucle si el backend
@@ -180,6 +184,10 @@ por encima de 9.
   botón danger y ghost "Volver".
 - **¿Marcar como no asistió?**: confirmación con aviso de que no se puede
   deshacer.
+- **Proponer otra hora**: cliente y hora actual, tira de días (hoy + 7) y slots
+  `verde/naranja/rojo` de `GET /barbero/citas/:id/disponibilidad`, duración de la
+  cita y "Proponer esta hora" (desactivado sin slot verde). Avisa si reemplaza
+  una propuesta vigente. Ver `docs/CAMBIO_HORA_FRONT.md`.
 
 Todos usan el `Sheet` del kit: overlay, Esc, toque fuera, scroll bloqueado,
 foco atrapado y retorno del foco al botón que lo abrió. Los `onCerrar` son
@@ -212,6 +220,9 @@ Implementado en `src/features/agenda/domain/errores.ts`.
 | 403 | Mensaje de la API o "No tienes permiso para esta acción." | No |
 | 404 | Mensaje de la API (`Cita no encontrada`, `Atención no encontrada`) | Sí |
 | 409 aceptar/rechazar con "expir" | "Esta solicitud ya expiró" | Sí |
+| 409 proponer: "expir" / "ya comenz" | "Esta solicitud ya expiró y no se puede reprogramar." / "Esta cita ya comenzó; no se puede proponer otra hora." | Sí |
+| 409 proponer: "cuenta" | "Este cliente no tiene cuenta de cliente, así que no puede confirmar el cambio." | No |
+| 409 proponer: "horario" | "Ese horario ya no está disponible. Elige otro." | Sí |
 | 409 cruce / ya respondida / cancelar / no asistió / propina | Mensaje de la API | Sí |
 | 429 | "Demasiados intentos, espera un momento." | No |
 | 5xx | "Algo salió mal. Inténtalo de nuevo." | Sí |

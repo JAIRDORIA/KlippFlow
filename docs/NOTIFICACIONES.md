@@ -108,15 +108,23 @@ Cliente (`docs/backend/PUSH_CLIENTE.md`): mismas claves en español más `tag`,
 }
 ```
 
-`tipo` puede ser `cita_aceptada`, `cita_rechazada`, `cita_cancelada` o
-`cita_expirada`. El service worker detecta el push de cliente por `tipo`,
-`citaId` o URL de `/mi`; usa `tag` para reemplazar la notificación anterior de
-la misma cita.
+`tipo` puede ser `cita_aceptada`, `cita_rechazada`, `cita_cancelada`,
+`cita_expirada` o `cita_hora_propuesta`. El service worker detecta el push de
+cliente por `tipo`, `citaId` o URL de `/mi`; usa `tag` para reemplazar la
+notificación anterior de la misma cita.
+
+`cita_hora_propuesta` abre `/mi/citas/{id}`, donde el cliente ve el banner con
+Aceptar / Rechazar (`docs/CAMBIO_HORA_FRONT.md`). Los push de **resultado** al
+barbero («el cliente aceptó / rechazó / no respondió la nueva hora») siguen
+siendo `{ titulo, cuerpo, url }`, sin `tipo` ni `citaId`: nunca se confunden con
+los del cliente.
 
 `/solicitudes` no existe en esta app (la pantalla es `/app/solicitudes`), así que
-`urlDestinoSegura` traduce esa ruta heredada. Cualquier URL de otro origen, o con
-otro esquema, cae en `/app/solicitudes`. Para el cliente, `urlDestinoCliente`
-acepta `/mi`, `/mi/*`, `/b/*` y `/cita/*`; lo demás cae en `/mi`.
+`urlDestinoSegura` traduce esa ruta heredada. Los avisos de resultado al barbero
+llegan con `url: "/"`, que también se traduce a `/app/solicitudes`. Cualquier URL
+de otro origen, o con otro esquema, cae en `/app/solicitudes`. Para el cliente,
+`urlDestinoCliente` acepta `/mi`, `/mi/*`, `/b/*` y `/cita/*`; lo demás cae en
+`/mi`.
 
 ---
 

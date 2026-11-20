@@ -12,7 +12,7 @@ Contrato de referencia: `docs/backend/CUENTAS_CLIENTE.md` y
 | `/registro/completar` | solo con registro en memoria | Título “Completa tu cuenta”: nombre, usuario, contraseña y celular. |
 | `/mi` | cliente | Inicio completo: saludo, aviso de app/notificaciones, próximas citas (máx. 3), “Ver todas”, mis barberos, agregar por código y menú de cuenta. |
 | `/mi/citas` | cliente | Listado completo de citas con estado. |
-| `/mi/citas/:id` | cliente | Detalle: estado, mensaje legible, fecha/hora, barbero, servicios por persona y total. |
+| `/mi/citas/:id` | cliente | Detalle: estado, mensaje legible, fecha/hora, barbero, servicios por persona y total. Si hay `propuestaCambioHora`, banner “Nueva hora propuesta” con la hora nueva, la anterior, el tiempo restante y Aceptar/Rechazar. |
 | `/mi/instalar` | cliente | Onboarding de instalación iOS y activación de notificaciones para cliente. |
 | `/mi/seguridad` | cliente | Passkeys: listar, crear con nombre y borrar con confirmación; enlace a cambiar contraseña. |
 | `/mi/nueva-contrasena` | cliente | `PUT /cliente/contrasena`; pide `contrasenaActual` salvo Google fresco (≤ 10 min). |
@@ -23,7 +23,8 @@ Contrato de referencia: `docs/backend/CUENTAS_CLIENTE.md` y
 
 - El bloque “Entrar” es solo para barberos con las credenciales que dio el administrador; Google, la recuperación y “Completa tu cuenta de cliente” son exclusivos de clientes.
 - El inicio del cliente no permite cancelar citas: esa acción queda fuera de este alcance.
-- “Mis citas” muestra primero pendientes y próximas aceptadas; el sondeo de 30 s solo corre si hay una cita pendiente y la pestaña está visible.
+- Las tarjetas de `/mi` y `/mi/citas` muestran el chip “Nueva hora propuesta” cuando hay propuesta vigente; aceptar y rechazar solo desde el detalle (`docs/CAMBIO_HORA_FRONT.md`).
+- “Mis citas” muestra primero pendientes y próximas aceptadas; el sondeo de 30 s corre si hay una cita pendiente o una propuesta de cambio de hora, solo con la pestaña visible.
 
 `src/app/rutas.ts` y `MetaNoIndex` refuerzan `noindex` en `/mi`, `/registro`,
 `/b`, `/cita` y rutas desconocidas. `/privacidad` es la única ruta indexable;

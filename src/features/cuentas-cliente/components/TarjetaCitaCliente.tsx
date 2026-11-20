@@ -12,6 +12,7 @@ import type { CitaCliente } from '../types'
 
 export function TarjetaCitaCliente({ cita }: { cita: CitaCliente }) {
   const barberia = cita.barbero.nombreBarberia ?? cita.barbero.nombre
+  const propuesta = cita.propuestaCambioHora
 
   return (
     <Link
@@ -31,6 +32,15 @@ export function TarjetaCitaCliente({ cita }: { cita: CitaCliente }) {
             {etiquetaEstadoCita(cita.estado)}
           </Chip>
         </div>
+
+        {propuesta && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip variante="ambar">Nueva hora propuesta</Chip>
+            <span className="type-small font-mono tabular-nums text-text">
+              {fechaCitaLegible(propuesta.fecha)} · {horaCitaLegible(propuesta.horaInicio)}
+            </span>
+          </div>
+        )}
 
         <div className="flex items-center justify-between gap-3">
           <span className="type-helper">

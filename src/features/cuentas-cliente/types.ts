@@ -1,12 +1,16 @@
 /**
- * Tipos de docs/backend/CUENTAS_CLIENTE.md. No inventar campos.
+ * Tipos de docs/backend/CUENTAS_CLIENTE.md y docs/backend/CAMBIO_HORA.md. No
+ * inventar campos.
  */
 
+import type { PropuestaCambioHora } from '@/shared/lib/propuestaCambioHora'
 import type {
   CitaCreada,
   EstadoCita,
   MontoApi,
 } from '@/features/reserva-publica/types'
+
+export type { PropuestaCambioHora }
 
 export interface BarberoCliente {
   nombre: string
@@ -47,6 +51,8 @@ export interface CitaCliente {
   numPersonas: number
   montoTotal: MontoApi
   motivos: MotivosCitaCliente
+  /** Nueva hora propuesta por el barbero; `null` si no hay propuesta vigente. */
+  propuestaCambioHora: PropuestaCambioHora | null
 }
 
 export interface ServicioDetalleCliente {

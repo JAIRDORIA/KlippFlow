@@ -16,6 +16,7 @@ export type AccionCita =
   | 'noAsistio'
   | 'atendido'
   | 'propina'
+  | 'proponerCambioHora'
 
 export interface ErrorAccion {
   mensaje: string
@@ -55,6 +56,42 @@ export function mensajeDeError(accion: AccionCita, error: unknown): ErrorAccion 
   }
 
   if (status === 409) {
+    if (accion === 'proponerCambioHora') {
+      if (/expir/i.test(texto)) {
+        return {
+          mensaje: 'Esta solicitud ya expiró y no se puede reprogramar.',
+          refrescar: true,
+        }
+      }
+
+      if (/ya comenz/i.test(texto)) {
+        return {
+          mensaje: 'Esta cita ya comenzó; no se puede proponer otra hora.',
+          refrescar: true,
+        }
+      }
+
+      if (/cuenta/i.test(texto)) {
+        return {
+          mensaje:
+            'Este cliente no tiene cuenta de cliente, así que no puede confirmar el cambio.',
+          refrescar: false,
+        }
+      }
+
+      if (/horario/i.test(texto)) {
+        return {
+          mensaje: 'Ese horario ya no está disponible. Elige otro.',
+          refrescar: true,
+        }
+      }
+
+      return {
+        mensaje: texto || 'Esta cita ya no se puede reprogramar.',
+        refrescar: true,
+      }
+    }
+
     const esSolicitud = accion === 'aceptar' || accion === 'rechazar'
     if (esSolicitud && /expir/i.test(texto)) {
       return { mensaje: 'Esta solicitud ya expiró', refrescar: true }

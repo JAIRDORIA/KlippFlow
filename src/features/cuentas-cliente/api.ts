@@ -109,3 +109,29 @@ export function obtenerCitaCliente(id: number): Promise<CitaClienteDetalle> {
     { zona: 'cliente' },
   )
 }
+
+function rutaCambioHora(id: number, accion: 'aceptar' | 'rechazar'): string {
+  return `/cliente/citas/${encodeURIComponent(String(id))}/cambio-hora/${accion}`
+}
+
+/**
+ * Aplica la nueva hora propuesta. Si la cita venía `pendiente` queda
+ * `aceptada`; si ya estaba `aceptada`, conserva el estado y cambia la hora.
+ */
+export function aceptarCambioHora(id: number): Promise<CitaClienteDetalle> {
+  return peticion<CitaClienteDetalle>(rutaCambioHora(id, 'aceptar'), {
+    metodo: 'POST',
+    zona: 'cliente',
+  })
+}
+
+/**
+ * Descarta la propuesta. `pendiente` → `rechazada` (motivo
+ * `cambio_hora_rechazado`); `aceptada` → sigue en su hora original.
+ */
+export function rechazarCambioHora(id: number): Promise<CitaClienteDetalle> {
+  return peticion<CitaClienteDetalle>(rutaCambioHora(id, 'rechazar'), {
+    metodo: 'POST',
+    zona: 'cliente',
+  })
+}

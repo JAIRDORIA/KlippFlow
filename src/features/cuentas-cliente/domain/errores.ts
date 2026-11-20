@@ -178,3 +178,27 @@ export function mapearErrorCreacionCliente(
     descartarHora: false,
   }
 }
+
+/**
+ * Errores de `POST /cliente/citas/:id/cambio-hora/{aceptar|rechazar}`.
+ * Fuente: `docs/backend/CAMBIO_HORA.md`.
+ */
+export function mapearErrorCambioHora(error: unknown): string {
+  if (!(error instanceof ErrorPeticion)) return MENSAJE_GENERICO
+
+  if (error.status === 0) return MENSAJE_RED
+  if (error.status === 404) return 'No encontramos esta cita.'
+  if (error.status === 429) return 'Demasiados intentos, espera un momento'
+  if (error.status === 400) return mensajeDeApi(error)
+
+  if (error.status === 409) {
+    const texto = (error.mensaje ?? '').trim()
+    if (/expir/i.test(texto)) return 'La propuesta ya expiró.'
+    if (/horario|disponible/i.test(texto)) {
+      return 'Ese horario ya no está disponible. La propuesta se descartó.'
+    }
+    return 'Ya no hay una propuesta vigente para esta cita.'
+  }
+
+  return MENSAJE_GENERICO
+}

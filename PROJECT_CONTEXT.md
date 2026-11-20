@@ -158,6 +158,14 @@ Completado:
   - Pruebas de dominio, cuerpo del PUT, `aceptaWhatsapp` y visibilidad de la
     casilla sin celular de perfil.
   - `docs/RESERVA_PUBLICA.md` y `docs/AJUSTES.md` actualizados.
+- Cambio de hora propuesto:
+  - El barbero propone otra hora desde `/app/solicitudes` y `/app/hoy` con un
+    Sheet que reutiliza la disponibilidad pública (`verde/naranja/rojo`).
+  - El cliente acepta o rechaza desde el banner de `/mi/citas/:id`; las tarjetas
+    de `/mi` y `/mi/citas` avisan con el chip “Nueva hora propuesta”.
+  - `propuestaCambioHora`, motivos `cambio_hora_*`, push `cita_hora_propuesta`,
+    sondeo con propuesta activa y `"/"` traducido a `/app/solicitudes`.
+  - `docs/backend/CAMBIO_HORA.md` y `docs/CAMBIO_HORA_FRONT.md`.
 
 No implementado todavía:
 

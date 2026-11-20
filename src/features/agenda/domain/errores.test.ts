@@ -71,3 +71,60 @@ describe('mensajeDeError', () => {
     })
   })
 })
+
+describe('mensajeDeError al proponer otra hora', () => {
+  it('traduce la solicitud expirada', () => {
+    expect(
+      mensajeDeError(
+        'proponerCambioHora',
+        error(409, 'Esta solicitud expiró (pasaron más de 2 horas)'),
+      ),
+    ).toEqual({
+      mensaje: 'Esta solicitud ya expiró y no se puede reprogramar.',
+      refrescar: true,
+    })
+  })
+
+  it('explica que la cita ya comenzó', () => {
+    expect(
+      mensajeDeError('proponerCambioHora', error(409, 'Esta cita ya comenzó')),
+    ).toEqual({
+      mensaje: 'Esta cita ya comenzó; no se puede proponer otra hora.',
+      refrescar: true,
+    })
+  })
+
+  it('avisa cuando el cliente no tiene cuenta', () => {
+    expect(
+      mensajeDeError(
+        'proponerCambioHora',
+        error(409, 'El cliente no tiene una cuenta para confirmar el cambio'),
+      ),
+    ).toEqual({
+      mensaje:
+        'Este cliente no tiene cuenta de cliente, así que no puede confirmar el cambio.',
+      refrescar: false,
+    })
+  })
+
+  it('avisa cuando el horario se ocupó', () => {
+    expect(
+      mensajeDeError('proponerCambioHora', error(409, 'Ese horario ya no está disponible')),
+    ).toEqual({
+      mensaje: 'Ese horario ya no está disponible. Elige otro.',
+      refrescar: true,
+    })
+  })
+
+  it('reutiliza el mensaje del 400 sin refrescar', () => {
+    expect(
+      mensajeDeError(
+        'proponerCambioHora',
+        error(400, 'La nueva hora debe ser diferente a la actual'),
+      ),
+    ).toEqual({
+      mensaje: 'La nueva hora debe ser diferente a la actual',
+      refrescar: false,
+    })
+  })
+})

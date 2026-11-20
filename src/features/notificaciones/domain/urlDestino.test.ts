@@ -13,6 +13,10 @@ describe('urlDestinoSegura', () => {
     expect(urlDestinoSegura('/solicitudes', ORIGEN)).toBe(RUTA_SOLICITUDES)
   })
 
+  it('lleva la raíz del push de resultado al panel de solicitudes', () => {
+    expect(urlDestinoSegura('/', ORIGEN)).toBe(RUTA_SOLICITUDES)
+  })
+
   it('acepta rutas internas relativas', () => {
     expect(urlDestinoSegura('/app/hoy', ORIGEN)).toBe('/app/hoy')
     expect(urlDestinoSegura('/app/solicitudes?x=1', ORIGEN)).toBe(
