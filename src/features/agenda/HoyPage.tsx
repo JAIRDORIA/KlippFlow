@@ -1,4 +1,4 @@
-import { Clock, TriangleAlert, Users, X } from 'lucide-react'
+import { CalendarClock, Clock, TriangleAlert, Users, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDashboardHoy } from '@/features/agenda/hooks'
@@ -14,7 +14,9 @@ import {
   type PuntoCita,
 } from '@/features/agenda/domain/agenda'
 import { encabezadoHoy } from '@/features/agenda/domain/hoy'
+import { BloquePropuesta } from '@/features/agenda/components/BloquePropuesta'
 import { SheetCancelarCita } from '@/features/agenda/components/SheetCancelarCita'
+import { SheetProponerHora } from '@/features/agenda/components/SheetProponerHora'
 import {
   SheetClienteAtendido,
   type ModoAtendido,
@@ -47,10 +49,12 @@ export function HoyPage() {
   } | null>(null)
   const [cancelar, setCancelar] = useState<CitaBarbero | null>(null)
   const [noAsistio, setNoAsistio] = useState<CitaBarbero | null>(null)
+  const [proponer, setProponer] = useState<CitaBarbero | null>(null)
 
   const cerrarAtendido = useCallback(() => setAtendido(null), [])
   const cerrarCancelar = useCallback(() => setCancelar(null), [])
   const cerrarNoAsistio = useCallback(() => setNoAsistio(null), [])
+  const cerrarProponer = useCallback(() => setProponer(null), [])
 
   const encabezado = encabezadoHoy(nombre, new Date(ahora))
 
@@ -77,6 +81,7 @@ export function HoyPage() {
           onCorregirPropina={(cita) => setAtendido({ cita, modo: 'propina' })}
           onCancelar={(cita) => setCancelar(cita)}
           onNoAsistio={(cita) => setNoAsistio(cita)}
+          onProponer={(cita) => setProponer(cita)}
         />
       )}
 
@@ -87,6 +92,7 @@ export function HoyPage() {
       />
       <SheetCancelarCita cita={cancelar} onCerrar={cerrarCancelar} />
       <SheetNoAsistio cita={noAsistio} onCerrar={cerrarNoAsistio} />
+      <SheetProponerHora cita={proponer} onCerrar={cerrarProponer} />
     </main>
   )
 }
@@ -97,12 +103,14 @@ function Contenido({
   onCorregirPropina,
   onCancelar,
   onNoAsistio,
+  onProponer,
 }: {
   datos: DashboardHoy
   onAtendido: (cita: CitaBarbero) => void
   onCorregirPropina: (cita: CitaBarbero) => void
   onCancelar: (cita: CitaBarbero) => void
   onNoAsistio: (cita: CitaBarbero) => void
+  onProponer: (cita: CitaBarbero) => void
 }) {
   const citas = datos.citas ?? []
   const huecos = datos.huecosLibres ?? []
@@ -146,6 +154,7 @@ function Contenido({
                 onCorregirPropina={onCorregirPropina}
                 onCancelar={onCancelar}
                 onNoAsistio={onNoAsistio}
+                onProponer={onProponer}
               />
             ))}
           </ol>
@@ -228,6 +237,7 @@ function FilaAgenda({
   onCorregirPropina,
   onCancelar,
   onNoAsistio,
+  onProponer,
 }: {
   cita: CitaBarbero
   punto: PuntoCita
@@ -237,6 +247,7 @@ function FilaAgenda({
   onCorregirPropina: (cita: CitaBarbero) => void
   onCancelar: (cita: CitaBarbero) => void
   onNoAsistio: (cita: CitaBarbero) => void
+  onProponer: (cita: CitaBarbero) => void
 }) {
   const nombre = nombreCliente(cita)
   const servicios = serviciosDeCita(cita)
@@ -321,6 +332,13 @@ function FilaAgenda({
           </p>
         )}
 
+        {cita.propuestaCambioHora && (
+          <BloquePropuesta
+            propuesta={cita.propuestaCambioHora}
+            whatsappUrl={cita.whatsappUrl}
+          />
+        )}
+
         {punto === 'atendida' && (
           <button
             type="button"
@@ -379,6 +397,17 @@ function FilaAgenda({
                 Disponible desde la hora de inicio
               </span>
             )}
+
+            <Button
+              variante="ghost"
+              tamano="compacto"
+              className="min-w-0 px-2"
+              onClick={() => onProponer(cita)}
+              aria-label={`Proponer otra hora para la cita de ${nombre}`}
+            >
+              <CalendarClock aria-hidden="true" size={14} strokeWidth={1.6} />
+              {cita.propuestaCambioHora ? 'Cambiar' : 'Proponer'}
+            </Button>
 
             <Button
               variante="ghost"

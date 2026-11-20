@@ -53,7 +53,7 @@ Misma forma que el push del barbero (`titulo`, `cuerpo`, `url`) más `tag`,
 }
 ```
 
-- `tipo`: `cita_aceptada` | `cita_rechazada` | `cita_cancelada` | `cita_expirada`.
+- `tipo`: `cita_aceptada` | `cita_rechazada` | `cita_cancelada` | `cita_expirada` | `cita_hora_propuesta`.
 - `tag`: `cita-{citaId}` (agrupa/reemplaza la notificación de esa cita).
 - `url`: `/mi/citas/{citaId}`.
 - Nunca incluye celular ni correo de nadie, ni datos de otras personas.
@@ -66,6 +66,7 @@ Misma forma que el push del barbero (`titulo`, `cuerpo`, `url`) más `tag`,
 | `cita_rechazada` | `Tu solicitud no fue aceptada` | según motivo (abajo) |
 | `cita_cancelada` | `Tu cita fue cancelada` | `{barbería} · {fecha y hora}` |
 | `cita_expirada` | `Tu solicitud expiró` | `{barbería} no alcanzó a responder. Puedes pedir otro horario.` |
+| `cita_hora_propuesta` | `Tu barbero propone otra hora` | `{barbería} · {nueva fecha y hora} (antes {fecha y hora actual})` |
 
 `{barbería}` = `barberos.nombre_barberia`; si no tiene, el nombre del barbero.
 
@@ -73,6 +74,9 @@ Motivos de rechazo:
 - `horario_ocupado` → `Ese horario ya está ocupado. Puedes pedir otro.`
 - `no_disponible` → `El barbero no está disponible. Puedes pedir otro horario.`
 - desconocido → `No fue posible aceptar tu solicitud. Puedes pedir otro horario.`
+
+Con `cita_hora_propuesta` el detalle (`/mi/citas/{id}`) muestra el banner con
+Aceptar / Rechazar; ver `docs/CAMBIO_HORA_FRONT.md`.
 
 ---
 
@@ -98,6 +102,7 @@ Siempre **después del commit** de la acción:
 | El barbero **rechaza** (con motivo) | `cita_rechazada` |
 | El barbero **cancela** una cita aceptada | `cita_cancelada` |
 | El job pasa a `expirada` | `cita_expirada` (solo las filas que esa corrida expiró) |
+| El barbero **propone otra hora** | `cita_hora_propuesta` |
 
 - Se envían todas las suscripciones del cliente en paralelo (`Promise.allSettled`)
   con timeout de 5 s por envío.

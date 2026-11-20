@@ -1,3 +1,4 @@
+import { useCallback, useRef } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useTituloPagina } from '@/app/useTituloPagina'
 import { useAuth } from '@/features/auth/useAuth'
@@ -8,6 +9,7 @@ import { Chip } from '@/shared/ui/Chip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Money } from '@/shared/ui/Money'
 import { Skeleton } from '@/shared/ui/Skeleton'
+import { BannerPropuesta } from './components/BannerPropuesta'
 import {
   etiquetaEstadoCita,
   fechaCitaLegible,
@@ -26,6 +28,16 @@ export function MiCitaDetallePage() {
   const id = Number(parametro)
   const idValido = Number.isInteger(id) && id > 0
   const consulta = useCitaCliente(id, idValido)
+
+  const ultimoRefresco = useRef(0)
+  const { refetch } = consulta
+  const alExpirarPropuesta = useCallback(() => {
+    const instante = Date.now()
+    // Una sola relectura al vencer: evita un bucle si el job aún no limpió nada.
+    if (instante - ultimoRefresco.current < 10_000) return
+    ultimoRefresco.current = instante
+    void refetch()
+  }, [refetch])
 
   if (!usuario || usuario.tipo !== 'cliente') {
     if (usuario?.tipo === 'barbero') return <Navigate to="/app" replace />
@@ -62,6 +74,9 @@ export function MiCitaDetallePage() {
   const barberia = cita.barbero.nombreBarberia ?? cita.barbero.nombre
   const motivoRechazo = motivoRechazoLegible(cita.motivos.motivoRechazo)
   const motivoCancelacion = motivoCancelacionLegible(cita.motivos.motivoCancelacion)
+  const mensaje = cita.propuestaCambioHora
+    ? 'Tu barbero propone otra hora. Responde antes de que expire.'
+    : mensajeEstadoCita(cita.estado, cita.motivos)
 
   return (
     <main className="screen flex min-h-[calc(100dvh-48px)] flex-col max-[899px]:min-h-dvh">
@@ -80,11 +95,13 @@ export function MiCitaDetallePage() {
                 {etiquetaEstadoCita(cita.estado)}
               </Chip>
             </div>
-            <p className="type-form text-secondary">
-              {mensajeEstadoCita(cita.estado, cita.motivos)}
-            </p>
+            <p className="type-form text-secondary">{mensaje}</p>
           </div>
         </header>
+
+        {cita.propuestaCambioHora && (
+          <BannerPropuesta cita={cita} onExpirada={alExpirarPropuesta} />
+        )}
 
         <Card className="flex flex-col gap-3">
           <p className="type-eyebrow">TU CITA</p>

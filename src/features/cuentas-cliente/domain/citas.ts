@@ -61,6 +61,12 @@ export function motivoRechazoLegible(motivo: string | null | undefined): string 
   if (motivo === 'no_disponible') {
     return 'El barbero no está disponible. Puedes pedir otro horario.'
   }
+  if (motivo === 'cambio_hora_rechazado') {
+    return 'No aceptaste la nueva hora propuesta.'
+  }
+  if (motivo === 'cambio_hora_no_respondida') {
+    return 'No respondiste la nueva hora propuesta a tiempo.'
+  }
   return 'No fue posible aceptar tu solicitud. Puedes pedir otro horario.'
 }
 
@@ -83,9 +89,15 @@ export function mensajeEstadoCita(
       return 'Tu cita fue aceptada.'
     case 'rechazada': {
       const motivo = motivoRechazoLegible(motivos.motivoRechazo)
-      return motivo
-        ? `Tu solicitud no fue aceptada. ${motivo}`
-        : 'Tu solicitud no fue aceptada.'
+      if (!motivo) return 'Tu solicitud no fue aceptada.'
+      // Estos dos motivos ya son frases completas sobre la propuesta de hora.
+      if (
+        motivos.motivoRechazo === 'cambio_hora_rechazado' ||
+        motivos.motivoRechazo === 'cambio_hora_no_respondida'
+      ) {
+        return motivo
+      }
+      return `Tu solicitud no fue aceptada. ${motivo}`
     }
     case 'cancelada': {
       const motivo = motivoCancelacionLegible(motivos.motivoCancelacion)

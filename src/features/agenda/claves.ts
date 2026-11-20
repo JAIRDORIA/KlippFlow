@@ -15,4 +15,7 @@ export const PREFIJO_BARBERO = ['barbero'] as const
 export const clavesConsulta = {
   dashboardHoy: ['barbero', 'dashboard', 'hoy'] as const,
   solicitudes: ['barbero', 'solicitudes'] as const,
+  /** Disponibilidad para reprogramar una cita concreta. */
+  disponibilidadCambioHora: (citaId: number, fecha: string) =>
+    ['barbero', 'citas', citaId, 'disponibilidad', fecha] as const,
 }

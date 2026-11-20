@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, TriangleAlert, Users } from 'lucide-react'
+import { ArrowRight, CalendarClock, Clock, TriangleAlert, Users } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   acompanantesDeCita,
@@ -8,6 +8,8 @@ import {
 import { mensajeDeError } from '@/features/agenda/domain/errores'
 import { useAceptarSolicitud } from '@/features/agenda/hooks'
 import type { Solicitud } from '@/features/agenda/types'
+import { BloquePropuesta } from '@/features/agenda/components/BloquePropuesta'
+import { SheetProponerHora } from '@/features/agenda/components/SheetProponerHora'
 import { calcularCuentaRegresiva } from '@/features/solicitudes/domain/cuentaRegresiva'
 import { etiquetaFechaSolicitud } from '@/features/solicitudes/domain/fecha'
 import { SheetRechazarSolicitud } from '@/features/solicitudes/components/SheetRechazarSolicitud'
@@ -34,7 +36,9 @@ export function SolicitudesPage() {
   const aceptar = useAceptarSolicitud()
 
   const [rechazo, setRechazo] = useState<Solicitud | null>(null)
+  const [proponer, setProponer] = useState<Solicitud | null>(null)
   const cerrarRechazo = useCallback(() => setRechazo(null), [])
+  const cerrarProponer = useCallback(() => setProponer(null), [])
 
   const solicitudes = data ?? []
 
@@ -119,6 +123,7 @@ export function SolicitudesPage() {
                 bloquearAceptar={aceptar.isPending}
                 onAceptar={() => aceptarSolicitud(solicitud)}
                 onRechazar={() => setRechazo(solicitud)}
+                onProponer={() => setProponer(solicitud)}
               />
             </li>
           ))}
@@ -126,6 +131,7 @@ export function SolicitudesPage() {
       )}
 
       <SheetRechazarSolicitud solicitud={rechazo} onCerrar={cerrarRechazo} />
+      <SheetProponerHora cita={proponer} onCerrar={cerrarProponer} />
     </main>
   )
 }
@@ -138,6 +144,7 @@ function TarjetaSolicitud({
   bloquearAceptar,
   onAceptar,
   onRechazar,
+  onProponer,
 }: {
   solicitud: Solicitud
   obtenidoEnMs: number
@@ -146,6 +153,7 @@ function TarjetaSolicitud({
   bloquearAceptar: boolean
   onAceptar: () => void
   onRechazar: () => void
+  onProponer: () => void
 }) {
   const cuenta = calcularCuentaRegresiva(
     solicitud.minutosRestantes,
@@ -264,6 +272,24 @@ function TarjetaSolicitud({
           Aceptar
         </Button>
       </div>
+
+      {solicitud.propuestaCambioHora && (
+        <BloquePropuesta
+          propuesta={solicitud.propuestaCambioHora}
+          whatsappUrl={solicitud.whatsappUrl}
+        />
+      )}
+
+      <Button
+        variante="ghost"
+        onClick={onProponer}
+        disabled={vencida || aceptando}
+        aria-disabled={vencida || aceptando || undefined}
+        className="w-full"
+      >
+        <CalendarClock aria-hidden="true" size={16} strokeWidth={1.6} />
+        {solicitud.propuestaCambioHora ? 'Cambiar la propuesta' : 'Proponer otra hora'}
+      </Button>
     </Card>
   )
 }

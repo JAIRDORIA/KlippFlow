@@ -18,6 +18,9 @@ export const RUTA_CLIENTE = '/mi'
 /** Rutas heredadas del backend → ruta real de esta app. */
 const RUTAS_HEREDADAS: Record<string, string> = {
   '/solicitudes': RUTA_SOLICITUDES,
+  // Los push de resultado al barbero (p. ej. "el cliente aceptó la nueva hora")
+  // llegan con `url: "/"`; ese push siempre es del panel.
+  '/': RUTA_SOLICITUDES,
 }
 
 export function urlDestinoSegura(

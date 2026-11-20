@@ -23,6 +23,7 @@ function cita(
   fecha: string,
   horaInicio = '10:00',
   horaFin = '10:30',
+  propuestaCambioHora: CitaCliente['propuestaCambioHora'] = null,
 ): CitaCliente {
   return {
     id,
@@ -38,6 +39,7 @@ function cita(
     numPersonas: 1,
     montoTotal: 20000,
     motivos: SIN_MOTIVOS,
+    propuestaCambioHora,
   }
 }
 
@@ -76,10 +78,32 @@ describe('estado de cita', () => {
   it('traduce motivos de rechazo y cancelación', () => {
     expect(motivoRechazoLegible('horario_ocupado')).toContain('horario ya está ocupado')
     expect(motivoRechazoLegible('no_disponible')).toContain('no está disponible')
+    expect(motivoRechazoLegible('cambio_hora_rechazado')).toBe(
+      'No aceptaste la nueva hora propuesta.',
+    )
+    expect(motivoRechazoLegible('cambio_hora_no_respondida')).toBe(
+      'No respondiste la nueva hora propuesta a tiempo.',
+    )
     expect(motivoRechazoLegible('otro')).toContain('No fue posible aceptar')
     expect(motivoRechazoLegible(null)).toBeNull()
     expect(motivoCancelacionLegible('  se enfermó  ')).toBe('se enfermó')
     expect(motivoCancelacionLegible('   ')).toBeNull()
+  })
+
+  it('no repite el preámbulo con los motivos de cambio de hora', () => {
+    expect(
+      mensajeEstadoCita('rechazada', {
+        motivoRechazo: 'cambio_hora_rechazado',
+        motivoCancelacion: null,
+      }),
+    ).toBe('No aceptaste la nueva hora propuesta.')
+
+    expect(
+      mensajeEstadoCita('rechazada', {
+        motivoRechazo: 'cambio_hora_no_respondida',
+        motivoCancelacion: null,
+      }),
+    ).toBe('No respondiste la nueva hora propuesta a tiempo.')
   })
 })
 
