@@ -23,18 +23,20 @@ manda el backend y la diferencia queda anotada en `docs/DISENO.md` §9.
 ```text
 src/features/agenda/
   types.ts                 DTOs tomados de docs/backend/
-  api.ts                   GET dashboard + 5 transiciones + propina
+  api.ts                   GET dashboard + 5 transiciones + propina + sin cita
   claves.ts                claves de TanStack Query
   hooks.ts                 useDashboardHoy y las mutaciones
   HoyPage.tsx              /app/hoy
   components/
     SheetClienteAtendido.tsx   Atendido y corrección de propina
+    SheetClienteSinCita.tsx    Cliente de la calle (atendido / en curso)
     SheetCancelarCita.tsx      Cancelar cita
     SheetNoAsistio.tsx         Confirmación de no asistió
   domain/
     agenda.ts              duración, próxima cita, punto, contadores, detalles
     hoy.ts                 eyebrow + saludo de Hoy
     propina.ts             validación de propina y motivo
+    sinCita.ts             catálogo, validación y cuerpo del POST sin cita
     errores.ts             mapa de errores por acción
     *.test.ts
 
@@ -59,9 +61,10 @@ Además: `src/shared/lib/useAhora.ts` (reloj de interfaz) y
 
 ```ts
 clavesConsulta = {
-  dashboardHoy: ['barbero', 'dashboard', 'hoy'],
-  solicitudes:  ['barbero', 'solicitudes'],
-  balanceHoy:   ['barbero', 'balance', 'hoy'],   // reservada para Cuentas
+  dashboardHoy:     ['barbero', 'dashboard', 'hoy'],
+  solicitudes:      ['barbero', 'solicitudes'],
+  serviciosActivos: ['barbero', 'servicios', 'activos'],  // selector sin cita
+  balanceHoy:       ['barbero', 'balance', 'hoy'],         // reservada para Cuentas
 }
 ```
 
@@ -130,6 +133,23 @@ trabajo".
 
 Estados: skeleton al cargar, `EstadoError` con "Reintentar" y vacío
 "No tienes citas para hoy".
+
+### 3.1 Cliente sin cita
+
+Debajo de los contadores hay un botón principal **«Cliente sin cita»** que abre
+`SheetClienteSinCita`. Con `resumen.sinCita > 0` se muestra además «Hoy
+registraste N servicios sin cita».
+
+Cada cita trae `origen` (`reserva` | `sin_cita`). En las `sin_cita`:
+
+- Chip **«Sin cita»** junto al nombre.
+- Se ocultan «No asistió», «Proponer/Cambiar» hora y `BloquePropuesta`; quedan
+  «Atendido» y la X de cancelar, que es lo que necesita un `en_curso`.
+- Un `en_curso` llega como `aceptada` y ya descuenta su tiempo de
+  `huecosLibres`.
+
+Detalle completo del Sheet, validaciones y errores:
+`docs/SERVICIO_SIN_CITA_FRONT.md`.
 
 ---
 

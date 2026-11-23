@@ -1,11 +1,14 @@
 import { peticion } from '@/shared/api/client'
 import type { DisponibilidadPublica } from '@/features/reserva-publica/types'
 import type {
+  CitaBarbero,
+  CuerpoServicioSinCita,
   DashboardHoy,
   MotivoRechazo,
   RespuestaAccionCita,
   RespuestaAtencion,
   RespuestaPropina,
+  ServicioSinCita,
 } from './types'
 
 /**
@@ -21,6 +24,29 @@ function rutaCita(id: number): string {
 
 export function obtenerDashboardHoy(): Promise<DashboardHoy> {
   return peticion<DashboardHoy>('/barbero/dashboard/hoy', { zona: 'barbero' })
+}
+
+/**
+ * Catálogo para el selector de «cliente sin cita». Sin `incluirInactivos` el
+ * backend devuelve solo los activos, que son los únicos que acepta el POST.
+ */
+export function obtenerServiciosActivos(): Promise<ServicioSinCita[]> {
+  return peticion<ServicioSinCita[]>('/barbero/servicios', { zona: 'barbero' })
+}
+
+/**
+ * Registra un servicio de un cliente que llegó sin reserva. Responde 201 con la
+ * cita completa (`origen: "sin_cita"`). Nunca se envía `barberoId`: sale del
+ * JWT, y mandarlo en el body da 400.
+ */
+export function registrarServicioSinCita(
+  cuerpo: CuerpoServicioSinCita,
+): Promise<CitaBarbero> {
+  return peticion<CitaBarbero>('/barbero/servicios-sin-cita', {
+    metodo: 'POST',
+    cuerpo,
+    zona: 'barbero',
+  })
 }
 
 export function aceptarSolicitud(id: number): Promise<RespuestaAccionCita> {

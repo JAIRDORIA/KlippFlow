@@ -9,11 +9,13 @@ import {
   marcarNoAsistio,
   obtenerDashboardHoy,
   obtenerDisponibilidadCambioHora,
+  obtenerServiciosActivos,
   proponerCambioHora,
   rechazarSolicitud,
+  registrarServicioSinCita,
 } from './api'
 import { PREFIJO_BARBERO, clavesConsulta } from './claves'
-import type { MotivoRechazo } from './types'
+import type { CuerpoServicioSinCita, MotivoRechazo } from './types'
 
 export const REFRESCO_AGENDA_MS = 60_000
 
@@ -60,6 +62,37 @@ export function useDashboardHoy() {
     refetchInterval: intervaloVisible,
     refetchIntervalInBackground: false,
     retry: reintentar,
+  })
+}
+
+/**
+ * Catálogo activo para el selector de «cliente sin cita». Solo se consulta con
+ * el Sheet abierto (`habilitada`), porque el catálogo también vive en Ajustes.
+ */
+export function useServiciosActivos(habilitada = true) {
+  return useQuery({
+    queryKey: clavesConsulta.serviciosActivos,
+    queryFn: obtenerServiciosActivos,
+    enabled: habilitada,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: reintentar,
+  })
+}
+
+/**
+ * Registra un cliente sin cita. Además de la agenda (`aceptada` ocupa tiempo),
+ * invalida todo `barbero`, así que el balance de hoy se refresca solo cuando el
+ * modo es `atendido`. Un 409 de cruce también releerá la agenda.
+ */
+export function useRegistrarServicioSinCita() {
+  const invalidar = useInvalidarAgenda()
+  return useMutation({
+    mutationFn: (cuerpo: CuerpoServicioSinCita) => registrarServicioSinCita(cuerpo),
+    onSuccess: invalidar,
+    onError: (error) => {
+      if (esCambioDeEstado(error)) invalidar()
+    },
   })
 }
 

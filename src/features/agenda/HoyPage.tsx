@@ -1,10 +1,11 @@
-import { CalendarClock, Clock, TriangleAlert, Users, X } from 'lucide-react'
+import { CalendarClock, Clock, Plus, TriangleAlert, Users, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDashboardHoy } from '@/features/agenda/hooks'
 import {
   acompanantesDeCita,
   calcularContadores,
+  esServicioSinCita,
   estadoVisualCita,
   minutosEntreHoras,
   nombreCliente,
@@ -16,6 +17,7 @@ import {
 import { encabezadoHoy } from '@/features/agenda/domain/hoy'
 import { BloquePropuesta } from '@/features/agenda/components/BloquePropuesta'
 import { SheetCancelarCita } from '@/features/agenda/components/SheetCancelarCita'
+import { SheetClienteSinCita } from '@/features/agenda/components/SheetClienteSinCita'
 import { SheetProponerHora } from '@/features/agenda/components/SheetProponerHora'
 import {
   SheetClienteAtendido,
@@ -50,11 +52,13 @@ export function HoyPage() {
   const [cancelar, setCancelar] = useState<CitaBarbero | null>(null)
   const [noAsistio, setNoAsistio] = useState<CitaBarbero | null>(null)
   const [proponer, setProponer] = useState<CitaBarbero | null>(null)
+  const [sinCita, setSinCita] = useState(false)
 
   const cerrarAtendido = useCallback(() => setAtendido(null), [])
   const cerrarCancelar = useCallback(() => setCancelar(null), [])
   const cerrarNoAsistio = useCallback(() => setNoAsistio(null), [])
   const cerrarProponer = useCallback(() => setProponer(null), [])
+  const cerrarSinCita = useCallback(() => setSinCita(false), [])
 
   const encabezado = encabezadoHoy(nombre, new Date(ahora))
 
@@ -77,6 +81,7 @@ export function HoyPage() {
       {data && (
         <Contenido
           datos={data}
+          onSinCita={() => setSinCita(true)}
           onAtendido={(cita) => setAtendido({ cita, modo: 'atendido' })}
           onCorregirPropina={(cita) => setAtendido({ cita, modo: 'propina' })}
           onCancelar={(cita) => setCancelar(cita)}
@@ -85,6 +90,7 @@ export function HoyPage() {
         />
       )}
 
+      <SheetClienteSinCita abierto={sinCita} onCerrar={cerrarSinCita} />
       <SheetClienteAtendido
         cita={atendido?.cita ?? null}
         modo={atendido?.modo ?? 'atendido'}
@@ -99,6 +105,7 @@ export function HoyPage() {
 
 function Contenido({
   datos,
+  onSinCita,
   onAtendido,
   onCorregirPropina,
   onCancelar,
@@ -106,6 +113,7 @@ function Contenido({
   onProponer,
 }: {
   datos: DashboardHoy
+  onSinCita: () => void
   onAtendido: (cita: CitaBarbero) => void
   onCorregirPropina: (cita: CitaBarbero) => void
   onCancelar: (cita: CitaBarbero) => void
@@ -130,6 +138,25 @@ function Contenido({
         >
           <Contador etiqueta="Solicitudes" valor={contadores.solicitudes} ambar />
         </Link>
+      </div>
+
+      <div className="mt-4">
+        <Button
+          onClick={onSinCita}
+          icono={<Plus aria-hidden="true" size={18} strokeWidth={1.6} />}
+          className="w-full"
+        >
+          Cliente sin cita
+        </Button>
+        {contadores.sinCita > 0 && (
+          <p className="type-helper mt-2">
+            Hoy registraste{' '}
+            <span className="font-mono tabular-nums text-text">
+              {contadores.sinCita}
+            </span>{' '}
+            {contadores.sinCita === 1 ? 'servicio sin cita' : 'servicios sin cita'}.
+          </p>
+        )}
       </div>
 
       <section className="mt-9">
@@ -254,6 +281,7 @@ function FilaAgenda({
   const acompanantes = acompanantesDeCita(cita)
   const propina = propinaDeCita(cita)
   const duracion = minutosEntreHoras(cita.horaInicio, cita.horaFin)
+  const sinCita = esServicioSinCita(cita)
 
   const detalleAcompanantes = acompanantes
     .map((acompanante) =>
@@ -302,7 +330,10 @@ function FilaAgenda({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="type-card-title truncate">{nombre}</p>
+            <div className="flex items-center gap-2">
+              <p className="type-card-title min-w-0 truncate">{nombre}</p>
+              {sinCita && <Chip variante="neutro" className="shrink-0">Sin cita</Chip>}
+            </div>
             <p className="type-aux mt-1">{servicios.join(' · ') || 'Servicio'}</p>
           </div>
           <Money monto={cita.montoTotal} tamano="destacado" className="shrink-0 text-text" />
@@ -332,7 +363,7 @@ function FilaAgenda({
           </p>
         )}
 
-        {cita.propuestaCambioHora && (
+        {!sinCita && cita.propuestaCambioHora && (
           <BloquePropuesta
             propuesta={cita.propuestaCambioHora}
             whatsappUrl={cita.whatsappUrl}
@@ -379,35 +410,40 @@ function FilaAgenda({
               Atendido
             </Button>
 
-            <Button
-              variante="ghost"
-              tamano="compacto"
-              className="min-w-0 px-2"
-              onClick={() => onNoAsistio(cita)}
-              disabled={!puedeNoAsistir}
-              aria-disabled={!puedeNoAsistir || undefined}
-              aria-describedby={!puedeNoAsistir ? idAyudaNoAsistio : undefined}
-              title={puedeNoAsistir ? undefined : 'Disponible desde la hora de inicio'}
-            >
-              No asistió
-            </Button>
+            {/* Una cita sin cita no admite «No asistió» ni cambio de hora. */}
+            {!sinCita && (
+              <>
+                <Button
+                  variante="ghost"
+                  tamano="compacto"
+                  className="min-w-0 px-2"
+                  onClick={() => onNoAsistio(cita)}
+                  disabled={!puedeNoAsistir}
+                  aria-disabled={!puedeNoAsistir || undefined}
+                  aria-describedby={!puedeNoAsistir ? idAyudaNoAsistio : undefined}
+                  title={puedeNoAsistir ? undefined : 'Disponible desde la hora de inicio'}
+                >
+                  No asistió
+                </Button>
 
-            {!puedeNoAsistir && (
-              <span id={idAyudaNoAsistio} className="sr-only">
-                Disponible desde la hora de inicio
-              </span>
+                {!puedeNoAsistir && (
+                  <span id={idAyudaNoAsistio} className="sr-only">
+                    Disponible desde la hora de inicio
+                  </span>
+                )}
+
+                <Button
+                  variante="ghost"
+                  tamano="compacto"
+                  className="min-w-0 px-2"
+                  onClick={() => onProponer(cita)}
+                  aria-label={`Proponer otra hora para la cita de ${nombre}`}
+                >
+                  <CalendarClock aria-hidden="true" size={14} strokeWidth={1.6} />
+                  {cita.propuestaCambioHora ? 'Cambiar' : 'Proponer'}
+                </Button>
+              </>
             )}
-
-            <Button
-              variante="ghost"
-              tamano="compacto"
-              className="min-w-0 px-2"
-              onClick={() => onProponer(cita)}
-              aria-label={`Proponer otra hora para la cita de ${nombre}`}
-            >
-              <CalendarClock aria-hidden="true" size={14} strokeWidth={1.6} />
-              {cita.propuestaCambioHora ? 'Cambiar' : 'Proponer'}
-            </Button>
 
             <Button
               variante="ghost"

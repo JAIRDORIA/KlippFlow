@@ -148,6 +148,17 @@ La raíz `/` redirige a `/app/hoy` si hay sesión de barbero y a `/login` si no.
 - "Horarios libres": chips verdes en píldora con el rango y, debajo, "Bloques: 09:00–13:00 · 15:00–19:00" en mono pequeño.
 - Estados: cargando (skeleton), sin citas ("No tienes citas para hoy" y los horarios libres), error con botón "Reintentar".
 - Endpoints: `GET /barbero/dashboard/hoy`. No inventar campos: leer `docs/backend/BARBERO_SOLICITUDES_Y_DASHBOARD.md`.
+- **Cliente sin cita (2026-11-23):** debajo de los contadores hay un botón principal "Cliente sin cita" (con `+`) que abre el Sheet 6.3.1. Con `resumen.sinCita > 0` se lee "Hoy registraste N servicios sin cita". Las citas con `origen: "sin_cita"` llevan el chip "Sin cita" junto al nombre y **no** muestran "No asistió", "Proponer/Cambiar" hora ni el bloque de propuesta: solo "Atendido" y la X.
+
+### 6.3.1 Sheet "Cliente sin cita"
+- Título "Cliente sin cita", texto "Registra un servicio que no venía por reserva. No se envían recordatorios."
+- "¿Cómo lo registras?" con dos opciones: "Ya lo atendí" (queda atendida, suma al balance y no ocupa agenda) y "Empezar ahora" (queda aceptada y bloquea la agenda desde ahora; se cierra con "Atendido").
+- Lista seleccionable de servicios activos con nombre, precio y duración; contador "N/10" y aviso al pasar de 10.
+- Tarjeta "TOTAL DEL CATÁLOGO" con el total en 36 px mono y la duración total. "Monto cobrado" se prellena con ese total y solo se envía si el barbero lo cambia.
+- Propina (No / Sí, campo y atajos $2.000, $5.000 y $10.000) **solo** en "Ya lo atendí": con `en_curso` el backend responde 400.
+- "Nombre y celular" opcionales y plegados; el celular acepta `+57`, espacios y guiones.
+- Botón principal "Registrar cobro" / "Empezar ahora" según el modo, y "Volver". Al recibir 201: toast "Servicio registrado", cierre y refresco de Hoy y Cuentas.
+- Endpoints: `GET /barbero/servicios` y `POST /barbero/servicios-sin-cita`. Detalle: `docs/SERVICIO_SIN_CITA_FRONT.md`.
 
 ### 6.4 Sheet "Cliente atendido"
 - Título "Cliente atendido", nombre del cliente, tarjeta "COBRA EN PERSONA" con el total en 36 px mono y "Total completo · {servicio}", pregunta "¿Dejó propina?" con control No / Sí, botón "Confirmar cobro" y nota "Esta acción no se puede deshacer. La propina solo se corrige hoy."
@@ -430,3 +441,14 @@ sistema visual (tokens, tipografías y kit).
 - **Passkeys:** el prompt pedía decir “solo guardamos una clave pública”, pero `PASSKEYS.md` confirma también `credential_id`, `user_handle`, nombre, tipo de dispositivo, respaldo y fechas. La política enumera esos datos y aclara que la huella/rostro/PIN no se reciben.
 - **Indexación:** `index.html` y `vercel.json` bloqueaban toda la app con `noindex`; se retiraron el meta global y el `X-Robots-Tag` global para que `/privacidad` sea indexable. `robots.txt` permite solo `/privacidad` y `MetaNoIndex` mantiene el resto fuera.
 - **Autorización:** el checkbox de `/registro/completar` es obligatorio en frontend, pero el backend no registra todavía la autorización ni su versión/fecha.
+
+### Decisiones del servicio sin cita (2026-11-23)
+
+- **Un modo antes de confirmar, no dos botones:** el enunciado pedía dos acciones («Ya lo atendí» y «Empezar ahora») y, a la vez, que la propina no se envíe con `en_curso`. Con dos botones la propina tendría que existir antes de conocer el modo, así que se eligió un `Segmented` con el modo y un único botón principal cuyo texto cambia. La propina solo se renderiza en `atendido`: es imposible enviarla con `en_curso`.
+- **`montoCobrado` solo si cambia:** el campo se prellena con la suma del catálogo y se omite del body si el valor sigue siendo ese (o si se vacía). Así el backend calcula el total con el catálogo y el body queda mínimo.
+- **«No asistió» oculto en `sin_cita`:** el enunciado solo pedía ocultar WhatsApp y el cambio de hora. Se oculta también «No asistió» porque el cliente está delante y el backend no documenta ese estado para este origen; «Atendido» y «Cancelar» (el cliente se fue) cubren el flujo.
+- **`origen` opcional en el tipo:** se asume `reserva` cuando falta, para no romper si el backend todavía no lo envía en algún endpoint (por ejemplo, `GET /barbero/solicitudes`).
+- **`resumen.sinCita` sin contador propio:** no se añadió una cuarta tarjeta (la rejilla es de tres); el dato se muestra como línea «Hoy registraste N servicios sin cita» bajo el botón.
+- **Celular reutilizado:** se usa `normalizarCelular` de la reserva pública, no una segunda regex.
+- **400 estrictos:** los mensajes de negocio se comparan con `^servicio no válido$` para no secuestrar la validación por campos (`servicioIds should not be empty`), que se muestra tal cual.
+
