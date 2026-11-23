@@ -3,6 +3,7 @@ import type { CitaBarbero } from '../types'
 import {
   acompanantesDeCita,
   calcularContadores,
+  esServicioSinCita,
   estadoVisualCita,
   minutosEntreHoras,
   nombreCliente,
@@ -109,8 +110,9 @@ describe('calcularContadores', () => {
         atendidas: 1,
         noAsistio: 1,
         solicitudesPendientes: 3,
+        sinCita: 2,
       }),
-    ).toEqual({ porAtender: 2, atendidos: 1, solicitudes: 3 })
+    ).toEqual({ porAtender: 2, atendidos: 1, solicitudes: 3, sinCita: 2 })
   })
 
   it('sin resumen devuelve ceros', () => {
@@ -118,6 +120,7 @@ describe('calcularContadores', () => {
       porAtender: 0,
       atendidos: 0,
       solicitudes: 0,
+      sinCita: 0,
     })
   })
 
@@ -129,8 +132,21 @@ describe('calcularContadores', () => {
         atendidas: Number.NaN,
         noAsistio: 0,
         solicitudesPendientes: 2.7,
+        sinCita: 1.9,
       }),
-    ).toEqual({ porAtender: 0, atendidos: 0, solicitudes: 2 })
+    ).toEqual({ porAtender: 0, atendidos: 0, solicitudes: 2, sinCita: 1 })
+  })
+
+  it('tolera un resumen sin sinCita (backend anterior)', () => {
+    expect(
+      calcularContadores({
+        citasHoy: 1,
+        aceptadas: 1,
+        atendidas: 0,
+        noAsistio: 0,
+        solicitudesPendientes: 0,
+      }).sinCita,
+    ).toBe(0)
   })
 })
 
@@ -222,6 +238,13 @@ describe('detalles de la cita', () => {
       ),
     ).toBe(0)
     expect(propinaDeCita(cita({ id: 1 }))).toBe(0)
+  })
+
+  it('reconoce las citas registradas sin cita', () => {
+    expect(esServicioSinCita(cita({ id: 1, origen: 'sin_cita' }))).toBe(true)
+    expect(esServicioSinCita(cita({ id: 1, origen: 'reserva' }))).toBe(false)
+    // Si el backend aún no manda `origen`, se trata como reserva.
+    expect(esServicioSinCita(cita({ id: 1 }))).toBe(false)
   })
 })
 

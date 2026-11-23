@@ -1,7 +1,7 @@
 # PROJECT_CONTEXT — Frontend KlippFlow
 
-Última actualización: **2026-11-09** (Prompt 10: recordatorios por WhatsApp en
-la reserva del cliente y en Ajustes del barbero).
+Última actualización: **2026-11-23** (servicios sin cita: cliente de la calle
+registrado desde el panel del barbero).
 
 ## 1. Qué es
 
@@ -166,6 +166,22 @@ Completado:
   - `propuestaCambioHora`, motivos `cambio_hora_*`, push `cita_hora_propuesta`,
     sondeo con propuesta activa y `"/"` traducido a `/app/solicitudes`.
   - `docs/backend/CAMBIO_HORA.md` y `docs/CAMBIO_HORA_FRONT.md`.
+- Servicios sin cita (2026-11-23):
+  - Botón «Cliente sin cita» en Hoy y Sheet con selector múltiple de servicios
+    activos (`GET /barbero/servicios`), total en vivo, monto cobrado editable y
+    propina opcional.
+  - `POST /barbero/servicios-sin-cita` con `modo: "atendido"` (queda atendida y
+    suma al balance) o `modo: "en_curso"` (queda aceptada y bloquea la agenda).
+  - La propina solo existe en `atendido`; `montoCobrado` se omite cuando
+    coincide con el catálogo, y los datos del cliente viajan solo si se
+    escribieron.
+  - Cada cita del dashboard trae `origen`: chip «Sin cita» y sin WhatsApp,
+    cambio de hora ni «No asistió». `resumen.sinCita` se muestra bajo el botón.
+  - Invalidación total de `['barbero']` al registrar: refresca Hoy y Cuentas.
+  - Pruebas de dominio (totales, límites, cuerpo) y del Sheet (modos, propina,
+    409 de cruce y celular).
+  - `docs/SERVICIO_SIN_CITA_FRONT.md` y actualización de
+    `docs/AGENDA_Y_SOLICITUDES.md` y `docs/DISENO.md`.
 
 No implementado todavía:
 
@@ -229,8 +245,8 @@ src/
     claves.ts                  claves de consulta ['barbero', ...]
     hooks.ts                   useDashboardHoy y las seis mutaciones
     HoyPage.tsx                /app/hoy
-    components/                sheets de atendido, cancelar y no asistió
-    domain/                    agenda, hoy, propina y errores + pruebas
+    components/                sheets de atendido, sin cita, cancelar y no asistió
+    domain/                    agenda, hoy, propina, sin cita y errores + pruebas
   features/solicitudes/
     api.ts / hooks.ts          GET /barbero/solicitudes
     SolicitudesPage.tsx        /app/solicitudes
@@ -671,6 +687,30 @@ separados. `/app/*` exige sesión de barbero y `/mi/*` exige sesión de cliente.
   mapa común de Ajustes; 400/403 usan el mensaje de la API y 401/403 de sesión
   siguen el comportamiento del cliente HTTP.
 
+### Decisiones del servicio sin cita (2026-11-23)
+
+- **Modo antes de confirmar:** el Sheet usa un `Segmented` («Ya lo atendí» /
+  «Empezar ahora») y un solo botón principal con el texto del modo. Es la forma
+  de que la propina no exista en `en_curso`: con dos botones habría que pedirla
+  antes de saber el modo. Detalle y alternativa descartada en `docs/DISENO.md`
+  §9.
+- **`montoCobrado` mínimo:** se prellena con la suma del catálogo y se omite del
+  body si el valor no cambió (o si se vació); el backend calcula el total.
+- **`en_curso` termina con las acciones de siempre:** no hay flujo nuevo para
+  cerrarlo; se usa «Atendido» (con propina) del Sheet «Cliente atendido».
+- **«No asistió» y cambio de hora ocultos:** en `sin_cita` el cliente está
+  delante, así que solo quedan «Atendido» y «Cancelar». El backend responde 409
+  a «proponer cambio de hora» en estas citas.
+- **`origen` y `resumen.sinCita` opcionales:** si el backend aún no los manda, se
+  asume `reserva` y 0, sin romper la pantalla.
+- **Una sola clave nueva:** `['barbero','servicios','activos']`, distinta de
+  `['barbero','servicios','todos']` de Ajustes (que incluye inactivos). Ambas
+  cuelgan de `barbero`, así que la invalidación global las cubre.
+- **400 de negocio estrictos:** `^servicio no válido$` para no capturar la
+  validación de campos del backend (`servicioIds should not be empty`), que se
+  muestra tal cual.
+- **Celular compartido:** se reutiliza `normalizarCelular` de la reserva pública.
+
 ## 10. Verificación
 
 Comandos obligatorios:
@@ -684,9 +724,10 @@ pnpm build
 pnpm dev      # http://localhost:3001
 ```
 
-Comprobado en el Prompt 10 (y se conserva lo verificado antes):
+Comprobado en los servicios sin cita (2026-11-23) y se conserva lo verificado
+antes:
 
-- 61 archivos de prueba, 517 pruebas, en verde con TZ por defecto, `TZ=UTC` y
+- 66 archivos de prueba, 577 pruebas, en verde con TZ por defecto, `TZ=UTC` y
   `TZ=Asia/Tokyo`.
 - TypeScript y ESLint sin errores.
 - Build de producción correcto: `dist/` con `index.html`,
@@ -704,6 +745,13 @@ Comprobado en el Prompt 10 (y se conserva lo verificado antes):
   `maskable` en una entrada aparte.
 - Sin hex fuera de `tokens.css` (solo el theme-color del manifest y de
   `index.html`, con el comentario que indica su token de origen).
+- Pruebas nuevas del servicio sin cita (2026-11-23):
+  `src/features/agenda/domain/sinCita.test.ts` (19 pruebas: totales, límite de
+  10 servicios, duración 5–600, monto 0–10.000.000, propina ignorada en
+  `en_curso`, nombre de 100 y celular `+57`, más el cuerpo del POST),
+  `src/features/agenda/components/SheetClienteSinCita.test.tsx` (los dos modos,
+  monto editado, propina, 409 de cruce y celular inválido) y los casos de
+  `servicioSinCita` en `domain/errores.test.ts`.
 - Pruebas nuevas del Prompt 10:
   `src/features/ajustes/domain/whatsapp.test.ts` (validación con válido, `+57`,
   espacios, inválido y activar sin celular; cuerpo del PUT),

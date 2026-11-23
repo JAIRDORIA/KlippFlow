@@ -22,6 +22,13 @@ export type EstadoCita =
   | 'atendida'
   | 'no_asistio'
 
+/**
+ * De dónde salió la cita. El dashboard lo trae en cada cita; se asume
+ * `reserva` cuando falta (por ejemplo, si el backend aún no lo envía).
+ * Las citas `sin_cita` no tienen WhatsApp ni cambio de hora.
+ */
+export type OrigenCita = 'reserva' | 'sin_cita'
+
 /** Motivos que el barbero puede enviar al rechazar (`POST .../rechazar`). */
 export type MotivoRechazo = 'horario_ocupado' | 'no_disponible'
 
@@ -70,6 +77,8 @@ export interface AtencionCita {
 export interface CitaBarbero {
   id: number
   estado: EstadoCita
+  /** `sin_cita` cuando se registró desde el panel sin reserva previa. */
+  origen?: OrigenCita
   fecha: string
   horaInicio: string
   horaFin: string
@@ -112,6 +121,8 @@ export interface ResumenDia {
   atendidas: number
   noAsistio: number
   solicitudesPendientes: number
+  /** Servicios sin cita del día (los dos modos). Opcional si no viene. */
+  sinCita?: number
 }
 
 export interface BloqueTrabajo {
@@ -160,4 +171,37 @@ export interface RespuestaAtencion {
 export interface RespuestaPropina {
   citaId: number
   atencion: AtencionRegistrada
+}
+
+/**
+ * Servicio activo del catálogo para el selector de «cliente sin cita».
+ * `GET /barbero/servicios` sin `incluirInactivos` devuelve solo activos.
+ */
+export interface ServicioSinCita {
+  id: number
+  nombre: string
+  descripcion: string | null
+  precio: MontoApi
+  duracionMinutos: number
+  activo: boolean
+}
+
+export type ModoServicioSinCita = 'atendido' | 'en_curso'
+
+/**
+ * Body de `POST /barbero/servicios-sin-cita`.
+ *
+ * - `montoCobrado` se omite cuando coincide con la suma del catálogo: el
+ *   backend usa el total de los precios.
+ * - `montoPropina` solo viaja con `modo: "atendido"` (con `en_curso` da 400).
+ * - Los datos del cliente se omiten si están vacíos.
+ * - `barberoId` nunca se envía: sale del JWT.
+ */
+export interface CuerpoServicioSinCita {
+  modo: ModoServicioSinCita
+  servicioIds: number[]
+  montoCobrado?: number
+  montoPropina?: number
+  clienteNombre?: string
+  clienteCelular?: string
 }

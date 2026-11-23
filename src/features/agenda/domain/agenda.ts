@@ -63,6 +63,8 @@ export interface ContadoresHoy {
   porAtender: number
   atendidos: number
   solicitudes: number
+  /** Servicios sin cita del día (atendidos y en curso). */
+  sinCita: number
 }
 
 /**
@@ -75,6 +77,7 @@ export function calcularContadores(resumen: ResumenDia | null | undefined): Cont
     porAtender: enteroSeguro(resumen?.aceptadas),
     atendidos: enteroSeguro(resumen?.atendidas),
     solicitudes: enteroSeguro(resumen?.solicitudesPendientes),
+    sinCita: enteroSeguro(resumen?.sinCita),
   }
 }
 
@@ -130,4 +133,13 @@ export function propinaDeCita(cita: CitaBarbero): number {
   const numero = typeof valor === 'number' ? valor : Number(valor)
   if (!Number.isFinite(numero) || numero <= 0) return 0
   return Math.trunc(numero)
+}
+
+/**
+ * Cita registrada desde el panel sin reserva previa. Estas citas no traen
+ * `whatsappUrl`, no admiten propuesta de cambio de hora (409) y no tiene
+ * sentido marcarlas como «no asistió», porque el cliente está delante.
+ */
+export function esServicioSinCita(cita: CitaBarbero): boolean {
+  return cita.origen === 'sin_cita'
 }

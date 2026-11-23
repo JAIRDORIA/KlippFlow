@@ -17,6 +17,7 @@ export type AccionCita =
   | 'atendido'
   | 'propina'
   | 'proponerCambioHora'
+  | 'servicioSinCita'
 
 export interface ErrorAccion {
   mensaje: string
@@ -105,6 +106,40 @@ export function mensajeDeError(accion: AccionCita, error: unknown): ErrorAccion 
   }
 
   if (status === 400) {
+    if (accion === 'servicioSinCita') {
+      // El backend manda textos fijos para estos cuatro casos de negocio. La
+      // comparación es estricta para no capturar la validación de campos
+      // (`servicioIds should not be empty`, etc.).
+      if (/^\s*servicio no v[aá]lido\s*$/i.test(texto)) {
+        return {
+          mensaje:
+            'Ese servicio ya no está disponible. Actualiza la lista e inténtalo de nuevo.',
+          refrescar: true,
+        }
+      }
+
+      if (/celular/i.test(texto)) {
+        return {
+          mensaje: 'Revisa el celular: deben ser 10 dígitos que empiecen por 3.',
+          refrescar: false,
+        }
+      }
+
+      if (/propina/i.test(texto)) {
+        return {
+          mensaje: 'La propina solo se registra al marcar «Atendido».',
+          refrescar: false,
+        }
+      }
+
+      if (/duraci/i.test(texto)) {
+        return {
+          mensaje: 'La duración total debe estar entre 5 y 600 minutos.',
+          refrescar: false,
+        }
+      }
+    }
+
     return {
       mensaje: texto || error.campos?.[0] || 'Revisa los datos e inténtalo de nuevo.',
       refrescar: false,
