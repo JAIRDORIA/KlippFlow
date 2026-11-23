@@ -169,6 +169,19 @@ describe('guardar y cargar la sesión unificada', () => {
     expect(cargarSesion(AHORA)).toEqual(sesionCliente())
   })
 
+  it('recupera un cliente registrado sin correo', () => {
+    const base = sesionCliente()
+    if (base.usuario.tipo !== 'cliente') throw new Error('Se esperaba un cliente')
+
+    const sinCorreo: Sesion = {
+      ...base,
+      usuario: { ...base.usuario, correo: null },
+    }
+    guardarSesion(sinCorreo)
+
+    expect(cargarSesion(AHORA)).toEqual(sinCorreo)
+  })
+
   it('descarta tokens vencidos, tipos cruzados y basura', () => {
     guardarSesion(sesionBarbero(tokenBarbero(futuro - 7200)))
     expect(cargarSesion(AHORA)).toBeNull()

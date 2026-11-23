@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   USERNAMES_RESERVADOS,
+  normalizarCelularRegistro,
+  normalizarCorreoRegistro,
   normalizarUsername,
   validarCelular,
+  validarCelularRegistro,
   validarContrasena,
+  validarCorreoRegistro,
+  validarNombreRegistro,
   validarPerfilCliente,
   validarUsername,
 } from './validadores'
@@ -119,5 +124,45 @@ describe('perfil de cliente', () => {
       nombre: 'Escribe tu nombre.',
       celular: 'Escribe un celular de 10 dígitos que empiece por 3.',
     })
+  })
+})
+
+describe('registro de cliente', () => {
+  it('normaliza el celular quitando todo lo que no sea dígito y el 57', () => {
+    expect(normalizarCelularRegistro('+57 300 111 2233')).toBe('3001112233')
+    expect(normalizarCelularRegistro('57 300 111 2233')).toBe('3001112233')
+    expect(normalizarCelularRegistro('(300) 111-2233')).toBe('3001112233')
+    expect(normalizarCelularRegistro('3001112233')).toBe('3001112233')
+    expect(normalizarCelularRegistro('2001112233')).toBeNull()
+    expect(normalizarCelularRegistro('300111223')).toBeNull()
+    expect(validarCelularRegistro('+57 300 111 2233')).toBeNull()
+    expect(validarCelularRegistro('2001112233')).toBe(
+      'Escribe un celular de 10 dígitos que empiece por 3.',
+    )
+  })
+
+  it('exige nombre de 1 a 100 caracteres después de trim', () => {
+    expect(validarNombreRegistro('Cliente Nuevo')).toBeNull()
+    expect(validarNombreRegistro('A')).toBeNull()
+    expect(validarNombreRegistro('   ')).toBe('Escribe tu nombre.')
+    expect(validarNombreRegistro('a'.repeat(100))).toBeNull()
+    expect(validarNombreRegistro('a'.repeat(101))).toBe(
+      'El nombre no puede superar 100 caracteres.',
+    )
+  })
+
+  it('acepta correo vacío y normaliza a minúsculas', () => {
+    expect(normalizarCorreoRegistro('   ')).toBeUndefined()
+    expect(normalizarCorreoRegistro(' Nuevo@Example.COM ')).toBe(
+      'nuevo@example.com',
+    )
+    expect(validarCorreoRegistro('')).toBeNull()
+    expect(validarCorreoRegistro('nuevo@example.com')).toBeNull()
+    expect(validarCorreoRegistro('no-es-correo')).toBe(
+      'Escribe un correo válido.',
+    )
+    expect(validarCorreoRegistro(`${'a'.repeat(250)}@x.com`)).toBe(
+      'El correo no puede superar 255 caracteres.',
+    )
   })
 })

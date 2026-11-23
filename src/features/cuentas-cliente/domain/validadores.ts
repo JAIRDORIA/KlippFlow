@@ -15,6 +15,8 @@ export const LARGO_MINIMO_USERNAME = 4
 export const LARGO_MAXIMO_USERNAME = 20
 export const LARGO_MINIMO_CONTRASENA = 8
 export const LARGO_MAXIMO_CONTRASENA = 72
+export const LARGO_MAXIMO_NOMBRE = 100
+export const LARGO_MAXIMO_CORREO = 255
 
 export function normalizarUsername(valor: string): string {
   return valor.trim().toLowerCase()
@@ -73,6 +75,52 @@ export function validarContrasena(
 export function validarCelular(valor: string): string | null {
   if (!normalizarCelular(valor)) {
     return 'Escribe un celular de 10 dígitos que empiece por 3.'
+  }
+  return null
+}
+
+/**
+ * Regla del registro: quita todo lo que no sea dígito, elimina el indicativo
+ * 57 cuando quedan 12 dígitos y exige ^3\\d{9}$.
+ */
+export function normalizarCelularRegistro(valor: string): string | null {
+  const digitos = valor.replace(/\D/g, '')
+  const nacional =
+    digitos.length === 12 && digitos.startsWith('57') ? digitos.slice(2) : digitos
+  return /^3\d{9}$/.test(nacional) ? nacional : null
+}
+
+export function validarCelularRegistro(valor: string): string | null {
+  if (!normalizarCelularRegistro(valor)) {
+    return 'Escribe un celular de 10 dígitos que empiece por 3.'
+  }
+  return null
+}
+
+/** El nombre del registro es obligatorio y admite de 1 a 100 caracteres. */
+export function validarNombreRegistro(nombre: string): string | null {
+  const limpio = nombre.trim()
+  if (limpio.length === 0) return 'Escribe tu nombre.'
+  if (limpio.length > LARGO_MAXIMO_NOMBRE) {
+    return `El nombre no puede superar ${LARGO_MAXIMO_NOMBRE} caracteres.`
+  }
+  return null
+}
+
+/** Correo opcional: vacío es válido; si viene, máximo 255 y formato válido. */
+export function normalizarCorreoRegistro(correo: string): string | undefined {
+  const limpio = correo.trim().toLowerCase()
+  return limpio === '' ? undefined : limpio
+}
+
+export function validarCorreoRegistro(correo: string): string | null {
+  const limpio = normalizarCorreoRegistro(correo)
+  if (!limpio) return null
+  if (limpio.length > LARGO_MAXIMO_CORREO) {
+    return `El correo no puede superar ${LARGO_MAXIMO_CORREO} caracteres.`
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpio)) {
+    return 'Escribe un correo válido.'
   }
   return null
 }

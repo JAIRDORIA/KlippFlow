@@ -128,7 +128,7 @@ function esUsuarioCliente(valor: unknown): valor is UsuarioSesionCliente {
     typeof datos.id === 'number' &&
     typeof datos.nombre === 'string' &&
     typeof datos.username === 'string' &&
-    typeof datos.correo === 'string' &&
+    (typeof datos.correo === 'string' || datos.correo === null) &&
     typeof datos.celular === 'string'
   )
 }

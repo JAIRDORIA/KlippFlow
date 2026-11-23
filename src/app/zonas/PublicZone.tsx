@@ -6,6 +6,7 @@ import { MiCitasPage } from '@/features/cuentas-cliente/MiCitasPage'
 import { MiInstalarPage } from '@/features/cuentas-cliente/MiInstalarPage'
 import { MiPage } from '@/features/cuentas-cliente/MiPage'
 import { NuevaContrasenaPage } from '@/features/cuentas-cliente/NuevaContrasenaPage'
+import { RegistroPage } from '@/features/cuentas-cliente/RegistroPage'
 import { useInvalidarCitasPush } from '@/features/cuentas-cliente/useInvalidarCitasPush'
 import { PrivacidadPage } from '@/features/legal/PrivacidadPage'
 import { MiSeguridadPage } from '@/features/passkeys/MiSeguridadPage'
@@ -77,6 +78,7 @@ export default function PublicZone() {
             </RutaCliente>
           }
         />
+        <Route path="registro" element={<RegistroPage />} />
         <Route path="registro/completar" element={<CompletarCuentaPage />} />
       </Routes>
     </>

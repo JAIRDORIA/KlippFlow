@@ -31,7 +31,8 @@ export interface ClienteAutenticado {
   id: number
   nombre: string
   username: string
-  correo: string
+  /** Null cuando la cuenta se creó sin correo (es opcional). */
+  correo: string | null
   celular: string
 }
 
@@ -93,11 +94,24 @@ export interface DatosCompletarCuenta {
   nombre?: string
 }
 
+/** Alta de cliente con usuario y contraseña (`POST /auth/cliente/registro`). */
+export interface DatosRegistroCliente {
+  nombre: string
+  username: string
+  contrasena: string
+  celular: string
+  /** Opcional: se omite del cuerpo si viene vacío. */
+  correo?: string
+}
+
+/** Misma forma que el login de cliente; se guarda con el mismo mecanismo. */
+export type RespuestaRegistroCliente = RespuestaLoginCliente
+
 export interface PerfilCliente {
   id: number
   nombre: string
   username: string
-  correo: string
+  correo: string | null
   celular: string
 }
 

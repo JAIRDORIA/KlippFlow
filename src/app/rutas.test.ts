@@ -27,6 +27,7 @@ describe('zonaDeRuta', () => {
     expect(zonaDeRuta('/mi')).toBe('publico')
     expect(zonaDeRuta('/mi/seguridad')).toBe('publico')
     expect(zonaDeRuta('/mi/nueva-contrasena')).toBe('publico')
+    expect(zonaDeRuta('/registro')).toBe('publico')
     expect(zonaDeRuta('/registro/completar')).toBe('publico')
     expect(zonaDeRuta('/privacidad')).toBe('publico')
     expect(zonaDeRuta('/admin')).toBe('admin')
@@ -55,6 +56,9 @@ describe('tituloDeRuta', () => {
     expect(tituloDeRuta('/mi/seguridad')).toBe('Seguridad · KlippFlow')
     expect(tituloDeRuta('/mi/nueva-contrasena')).toBe(
       'Nueva contraseña · KlippFlow',
+    )
+    expect(tituloDeRuta('/registro')).toBe(
+      'Crear cuenta de cliente · KlippFlow',
     )
     expect(tituloDeRuta('/registro/completar')).toBe(
       'Completa tu cuenta de cliente · KlippFlow',
@@ -110,6 +114,7 @@ describe('esRutaNoIndex', () => {
       '/mi',
       '/mi/seguridad',
       '/mi/nueva-contrasena',
+      '/registro',
       '/registro/completar',
     ]) {
       expect(esRutaNoIndex(ruta), ruta).toBe(true)

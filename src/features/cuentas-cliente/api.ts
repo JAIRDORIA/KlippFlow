@@ -3,10 +3,12 @@ import type {
   CambiarContrasenaBody,
   CredencialesLoginUnificado,
   DatosCompletarCuenta,
+  DatosRegistroCliente,
   PerfilCliente,
   RespuestaGoogle,
   RespuestaLogin,
   RespuestaLoginCliente,
+  RespuestaRegistroCliente,
 } from '@/features/auth/types'
 import { peticion } from '@/shared/api/client'
 import type {
@@ -33,6 +35,18 @@ export function loginGoogle(idToken: string): Promise<RespuestaGoogle> {
   return peticion<RespuestaGoogle>('/auth/cliente/google', {
     metodo: 'POST',
     cuerpo: { idToken },
+    zona: 'publico',
+    redirigirEn401: false,
+  })
+}
+
+/** Alta pública de cliente con usuario y contraseña. No envía token ni campos extra. */
+export function registrarCliente(
+  datos: DatosRegistroCliente,
+): Promise<RespuestaRegistroCliente> {
+  return peticion<RespuestaRegistroCliente>('/auth/cliente/registro', {
+    metodo: 'POST',
+    cuerpo: datos,
     zona: 'publico',
     redirigirEn401: false,
   })

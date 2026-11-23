@@ -9,10 +9,12 @@ import type {
   CambiarContrasenaBody,
   CredencialesLoginUnificado,
   DatosCompletarCuenta,
+  DatosRegistroCliente,
   PerfilCliente,
   RespuestaGoogle,
   RespuestaLogin,
   RespuestaLoginCliente,
+  RespuestaRegistroCliente,
 } from '@/features/auth/types'
 import { ErrorPeticion } from '@/shared/api/client'
 import {
@@ -28,6 +30,7 @@ import {
   obtenerCitasCliente,
   obtenerPerfil,
   rechazarCambioHora,
+  registrarCliente,
   vincularBarbero,
 } from './api'
 import type {
@@ -91,6 +94,35 @@ export function useLoginGoogle() {
         return
       }
       iniciarSesion(respuesta)
+    },
+  })
+}
+
+export function useRegistroCliente() {
+  const {
+    iniciarSesion,
+    actualizarPerfil: actualizarPerfilSesion,
+  } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    RespuestaRegistroCliente,
+    unknown,
+    DatosRegistroCliente
+  >({
+    mutationFn: registrarCliente,
+    onSuccess: (respuesta) => {
+      // Mismo mecanismo que el login: guarda token y cliente en la ranura única.
+      iniciarSesion(respuesta)
+
+      // Refresca el perfil real con GET /cliente/perfil. Si falla, la cuenta ya
+      // quedó creada y la sesión guardada sigue siendo válida.
+      void obtenerPerfil()
+        .then((perfil) => {
+          actualizarPerfilSesion(perfil)
+          queryClient.setQueryData(clavesCliente.perfil, perfil)
+        })
+        .catch(() => undefined)
     },
   })
 }

@@ -33,7 +33,8 @@ export function zonaDeRuta(pathname: string): Zona {
     ruta.startsWith('/cita/') ||
     ruta === '/mi' ||
     ruta.startsWith('/mi/') ||
-    ruta === '/registro/completar' ||
+    ruta === '/registro' ||
+    ruta.startsWith('/registro/') ||
     ruta === '/privacidad'
   ) {
     return 'publico'
@@ -83,6 +84,7 @@ export function tituloDeRuta(
   if (ruta.startsWith('/mi/citas/')) return `Detalle de cita · ${SUFIJO}`
   if (ruta === '/mi/seguridad') return `Seguridad · ${SUFIJO}`
   if (ruta === '/mi/nueva-contrasena') return `Nueva contraseña · ${SUFIJO}`
+  if (ruta === '/registro') return `Crear cuenta de cliente · ${SUFIJO}`
   if (ruta === '/registro/completar') return `Completa tu cuenta de cliente · ${SUFIJO}`
 
   if (ruta === '/app' || ruta === '/app/hoy') return `Hoy · ${SUFIJO}`
