@@ -80,6 +80,11 @@ export function LoginPage() {
   const aviso = avisoPorMotivo(parametros.get('motivo'))
   const puedeEntrar = username.trim().length > 0 && password.length > 0
   const soporta = soportaPasskeys()
+  const consultaRegistro = new URLSearchParams()
+  if (volver) consultaRegistro.set('volver', volver)
+  const destinoRegistro = `/registro${
+    consultaRegistro.toString() ? `?${consultaRegistro.toString()}` : ''
+  }`
 
   const login = useLoginUnificado()
   const google = useLoginGoogle()
@@ -340,6 +345,12 @@ export function LoginPage() {
               deshabilitado={pendiente}
             />
             <TextoAceptacionGoogle />
+            <Link
+              to={destinoRegistro}
+              className="type-form kf-press inline-flex h-[var(--height-button)] w-full items-center justify-center rounded-[var(--radius-button)] border border-line px-[var(--padding-button-x)] font-semibold text-text transition-colors hover:bg-white-5"
+            >
+              Crear cuenta con usuario y contraseña
+            </Link>
             {soporta && !marcaPasskey && (
               <BotonPasskey
                 onClick={entrarConPasskey}

@@ -7,6 +7,7 @@ import {
   mapearErrorGoogle,
   mapearErrorLogin,
   mapearErrorPerfil,
+  mapearErrorRegistro,
 } from './errores'
 
 function error(status: number, mensaje = 'x', campos?: string[]) {
@@ -123,6 +124,48 @@ describe('mapearErrorContrasena y mapearErrorPerfil', () => {
     )
     expect(mapearErrorPerfil(error(400, 'x', ['Campo inválido']))).toBe(
       'Campo inválido',
+    )
+  })
+})
+
+describe('mapearErrorRegistro', () => {
+  it('conserva todos los mensajes del 400 y los asocia a su campo', () => {
+    const mapeado = mapearErrorRegistro(
+      error(400, 'x', [
+        'nombre should not be empty',
+        'username must be longer than or equal to 4 characters',
+        'correo must be an email',
+      ]),
+    )
+
+    expect(mapeado.detalle).toEqual([
+      'nombre should not be empty',
+      'username must be longer than or equal to 4 characters',
+      'correo must be an email',
+    ])
+    expect(mapeado.mensaje).toBe('nombre should not be empty')
+    expect(mapeado.campos).toEqual({
+      nombre: 'nombre should not be empty',
+      username: 'username must be longer than or equal to 4 characters',
+      correo: 'correo must be an email',
+    })
+  })
+
+  it('marca el username en 409 con el mensaje del requisito', () => {
+    const mapeado = mapearErrorRegistro(error(409, 'Ese usuario ya está en uso'))
+
+    expect(mapeado.mensaje).toBe('Ese usuario ya está en uso')
+    expect(mapeado.campos).toEqual({
+      username: 'Ese usuario ya está en uso',
+    })
+  })
+
+  it('traduce 429 y errores de red', () => {
+    expect(mapearErrorRegistro(error(429)).mensaje).toBe(
+      'Demasiados intentos. Espera unos minutos.',
+    )
+    expect(mapearErrorRegistro(error(0)).mensaje).toBe(
+      'No pudimos conectar. Revisa tu internet.',
     )
   })
 })

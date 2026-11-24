@@ -99,6 +99,21 @@ describe('LoginPage', () => {
     expect(
       screen.getByRole('link', { name: 'Soy cliente y olvidé mi contraseña' }),
     ).toHaveAttribute('href', '/login?recuperar=1')
+    expect(
+      screen.getByRole('link', {
+        name: 'Crear cuenta con usuario y contraseña',
+      }),
+    ).toHaveAttribute('href', '/registro')
+  })
+
+  it('conserva el destino seguro al enlazar al registro', () => {
+    renderizarLogin('/login?volver=%2Fmi')
+
+    expect(
+      screen.getByRole('link', {
+        name: 'Crear cuenta con usuario y contraseña',
+      }),
+    ).toHaveAttribute('href', '/registro?volver=%2Fmi')
   })
 
   it('en modo recuperación solo muestra Google', () => {

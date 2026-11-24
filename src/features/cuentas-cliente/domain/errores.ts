@@ -202,3 +202,90 @@ export function mapearErrorCambioHora(error: unknown): string {
 
   return MENSAJE_GENERICO
 }
+
+export type CampoRegistro =
+  | 'nombre'
+  | 'username'
+  | 'contrasena'
+  | 'celular'
+  | 'correo'
+
+export type ErroresCamposRegistro = Partial<Record<CampoRegistro, string>>
+
+export interface ErrorRegistroMapeado {
+  /** Mensaje principal para el resumen del formulario. */
+  mensaje: string
+  /** Todos los mensajes del backend, para mostrarlos uno por línea. */
+  detalle: string[]
+  /** Mensajes asociados al campo que los originó. */
+  campos: ErroresCamposRegistro
+}
+
+const PATRONES_CAMPO_REGISTRO: ReadonlyArray<{
+  campo: CampoRegistro
+  patron: RegExp
+}> = [
+  { campo: 'nombre', patron: /\bnombre\b/i },
+  { campo: 'username', patron: /\busername\b|\busuario\b/i },
+  {
+    campo: 'contrasena',
+    patron: /\bcontrasena\b|\bcontraseña\b|\bpassword\b/i,
+  },
+  { campo: 'celular', patron: /\bcelular\b|\btelefono\b|\bteléfono\b/i },
+  { campo: 'correo', patron: /\bcorreo\b|\bemail\b|\bmail\b/i },
+]
+
+function campoDeMensajeRegistro(mensaje: string): CampoRegistro | null {
+  const encontrado = PATRONES_CAMPO_REGISTRO.find(({ patron }) =>
+    patron.test(mensaje),
+  )
+  return encontrado?.campo ?? null
+}
+
+/**
+ * Traduce los errores documentados de POST /auth/cliente/registro.
+ * En 400 conserva cada mensaje del backend (aunque llegue como array) y lo
+ * asocia a su campo cuando el texto lo menciona.
+ */
+export function mapearErrorRegistro(error: unknown): ErrorRegistroMapeado {
+  if (!(error instanceof ErrorPeticion)) {
+    return { mensaje: MENSAJE_GENERICO, detalle: [], campos: {} }
+  }
+
+  if (error.status === 400) {
+    const detalle =
+      error.campos && error.campos.length > 0
+        ? [...error.campos]
+        : [error.mensaje || MENSAJE_GENERICO]
+    const campos: ErroresCamposRegistro = {}
+
+    for (const mensaje of detalle) {
+      const campo = campoDeMensajeRegistro(mensaje)
+      if (!campo) continue
+      campos[campo] = campos[campo] ? `${campos[campo]} ${mensaje}` : mensaje
+    }
+
+    return {
+      mensaje: detalle[0] ?? MENSAJE_GENERICO,
+      detalle,
+      campos,
+    }
+  }
+
+  if (error.status === 409) {
+    const mensaje = 'Ese usuario ya está en uso'
+    return { mensaje, detalle: [mensaje], campos: { username: mensaje } }
+  }
+
+  if (error.status === 429) {
+    const mensaje = 'Demasiados intentos. Espera unos minutos.'
+    return { mensaje, detalle: [mensaje], campos: {} }
+  }
+
+  if (error.status === 0) {
+    return { mensaje: MENSAJE_RED, detalle: [MENSAJE_RED], campos: {} }
+  }
+
+  const mensaje = error.mensaje || MENSAJE_GENERICO
+  return { mensaje, detalle: [mensaje], campos: {} }
+}
