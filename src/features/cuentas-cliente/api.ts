@@ -8,7 +8,10 @@ import type {
   RespuestaGoogle,
   RespuestaLogin,
   RespuestaLoginCliente,
+  RespuestaMensajeOk,
   RespuestaRegistroCliente,
+  DatosRestablecerPassword,
+  DatosVerificarCorreo,
 } from '@/features/auth/types'
 import { peticion } from '@/shared/api/client'
 import type {
@@ -40,11 +43,64 @@ export function loginGoogle(idToken: string): Promise<RespuestaGoogle> {
   })
 }
 
-/** Alta pública de cliente con usuario y contraseña. No envía token ni campos extra. */
+/**
+ * Alta pública de cliente con usuario y contraseña. Ya no devuelve sesión:
+ * responde 201 con `requiereVerificacion` y envía un código al correo.
+ */
 export function registrarCliente(
   datos: DatosRegistroCliente,
 ): Promise<RespuestaRegistroCliente> {
   return peticion<RespuestaRegistroCliente>('/auth/cliente/registro', {
+    metodo: 'POST',
+    cuerpo: datos,
+    zona: 'publico',
+    redirigirEn401: false,
+  })
+}
+
+/** Confirma el correo con el código de 6 dígitos. Aquí sí se inicia sesión. */
+export function verificarCorreo(
+  datos: DatosVerificarCorreo,
+): Promise<RespuestaLoginCliente> {
+  return peticion<RespuestaLoginCliente>('/auth/cliente/verificar-correo', {
+    metodo: 'POST',
+    cuerpo: datos,
+    zona: 'publico',
+    redirigirEn401: false,
+  })
+}
+
+/** Respuesta genérica a propósito: no revela si la cuenta existe. */
+export function reenviarCodigoVerificacion(
+  correo: string,
+): Promise<RespuestaMensajeOk> {
+  return peticion<RespuestaMensajeOk>(
+    '/auth/cliente/reenviar-codigo-verificacion',
+    {
+      metodo: 'POST',
+      cuerpo: { correo },
+      zona: 'publico',
+      redirigirEn401: false,
+    },
+  )
+}
+
+/** `identificador` es el username o el correo. Respuesta siempre genérica. */
+export function solicitarRecuperacionPassword(
+  identificador: string,
+): Promise<RespuestaMensajeOk> {
+  return peticion<RespuestaMensajeOk>('/auth/cliente/recuperar-password', {
+    metodo: 'POST',
+    cuerpo: { identificador },
+    zona: 'publico',
+    redirigirEn401: false,
+  })
+}
+
+export function restablecerPassword(
+  datos: DatosRestablecerPassword,
+): Promise<{ ok: true }> {
+  return peticion<{ ok: true }>('/auth/cliente/restablecer-password', {
     metodo: 'POST',
     cuerpo: datos,
     zona: 'publico',

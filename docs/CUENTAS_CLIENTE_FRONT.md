@@ -8,7 +8,9 @@ Contrato de referencia: `docs/backend/CUENTAS_CLIENTE.md` y
 | Ruta | Acceso | Pantalla |
 |---|---|---|
 | `/login` | público | Formulario unificado usuario + contraseña, separador “o” y botón de Google. Acepta `?volver=`. |
-| `/login?recuperar=1` | público | Solo Google, con el texto “Entra con Google para crear una contraseña nueva”. |
+| `/login?recuperar=1` | público | Vía secundaria para quien se registró con Google: solo Google, con el texto “¿Te registraste con Google? Entra con Google para crear una contraseña nueva.” y el enlace “Recuperar con un código al correo”. |
+| `/registro/verificar` | público | Verificación de correo: código de 6 dígitos, “Verificar” y “Reenviar código” con 60 s de espera. El correo llega en `location.state`; si falta, se pide. Al verificar se inicia sesión. |
+| `/recuperar` | público | Recuperación por código: paso 1 “Usuario o correo”; paso 2 código + nueva contraseña. Al terminar va a `/login?motivo=contrasena-restablecida`. |
 | `/registro/completar` | solo con registro en memoria | Título “Completa tu cuenta”: nombre, usuario, contraseña y celular. |
 | `/mi` | cliente | Inicio completo: saludo, aviso de app/notificaciones, próximas citas (máx. 3), “Ver todas”, mis barberos, agregar por código y menú de cuenta. |
 | `/mi/citas` | cliente | Listado completo de citas con estado. |
@@ -66,9 +68,51 @@ El `registroToken` y el perfil de Google no se guardan en storage, URL, caché
 de TanStack Query ni `history.state`. El único dato que viaja en la URL es
 `volver`, validado con `volverSeguro`.
 
+## Verificación de correo y recuperación por código
+
+Contrato: `docs/backend/CUENTAS_CLIENTE.md`.
+
+- **Registro** (`/registro`): el correo es obligatorio y se envía en
+  minúsculas. `POST /auth/cliente/registro` responde 201
+  `{ requiereVerificacion, correo, mensaje }` **sin token**: no se inicia
+  sesión y se navega a `/registro/verificar` con `{ correo, mensaje }` en
+  `location.state` (nunca en la URL). Un 409 “Ese correo ya está registrado”
+  marca el campo correo.
+- **Verificación** (`/registro/verificar`): `POST /auth/cliente/verificar-correo`
+  con `{ correo, codigo }`; el código se guarda y se envía como **string** para
+  conservar los ceros. El 200 trae `accessToken` y se guarda con el mismo
+  mecanismo del login; luego va a `volver` o `/mi`.
+- **Reenviar código**: `POST /auth/cliente/reenviar-codigo-verificacion`. Se
+  muestra siempre el mensaje genérico del backend, se limpia el código escrito
+  (el anterior queda invalidado) y el botón queda bloqueado 60 s.
+- **Login con correo sin verificar**: un 403 “Debes verificar tu correo antes
+  de iniciar sesión” (contraseña) lleva a `/registro/verificar`. Si el cliente
+  escribió un correo se precarga; si escribió su username, la pantalla pide el
+  correo porque el backend lo exige. Con passkey se muestra el mensaje y un
+  enlace “Verificar mi correo”. El 403 de cuenta desactivada sigue mostrando
+  “Tu cuenta no está activa…”.
+- **Recuperar contraseña** (`/recuperar`):
+  1. `POST /auth/cliente/recuperar-password { identificador }` (username o
+     correo, en minúsculas). Siempre se muestra el mensaje genérico y se pasa
+     al paso 2; nunca se revela si la cuenta existe.
+  2. `POST /auth/cliente/restablecer-password { identificador, codigo,
+     nuevaContrasena }`. El identificador vive solo en el estado del
+     componente. 200 → `/login?motivo=contrasena-restablecida` (aviso verde
+     “Contraseña actualizada. Entra con tu nueva contraseña.”).
+- Reglas del código: 6 dígitos (`inputmode="numeric"`, `maxlength=6`,
+  `autocomplete="one-time-code"`), vence a los 15 minutos, máximo 5 intentos y
+  se invalida al usarlo o al pedir otro. Los 400 (“Código inválido o vencido”,
+  “El correo ya está verificado”, reglas de contraseña) se muestran tal cual;
+  429 → “Demasiados intentos…”.
+
 ## Endpoints usados
 
 - `POST /auth/login`
+- `POST /auth/cliente/registro`
+- `POST /auth/cliente/verificar-correo`
+- `POST /auth/cliente/reenviar-codigo-verificacion`
+- `POST /auth/cliente/recuperar-password`
+- `POST /auth/cliente/restablecer-password`
 - `POST /auth/cliente/google`
 - `POST /auth/cliente/completar-cuenta`
 - `GET/PATCH /cliente/perfil`

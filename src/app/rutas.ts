@@ -35,6 +35,7 @@ export function zonaDeRuta(pathname: string): Zona {
     ruta.startsWith('/mi/') ||
     ruta === '/registro' ||
     ruta.startsWith('/registro/') ||
+    ruta === '/recuperar' ||
     ruta === '/privacidad'
   ) {
     return 'publico'
@@ -86,6 +87,8 @@ export function tituloDeRuta(
   if (ruta === '/mi/nueva-contrasena') return `Nueva contraseña · ${SUFIJO}`
   if (ruta === '/registro') return `Crear cuenta de cliente · ${SUFIJO}`
   if (ruta === '/registro/completar') return `Completa tu cuenta de cliente · ${SUFIJO}`
+  if (ruta === '/registro/verificar') return `Verifica tu correo · ${SUFIJO}`
+  if (ruta === '/recuperar') return `Recuperar contraseña · ${SUFIJO}`
 
   if (ruta === '/app' || ruta === '/app/hoy') return `Hoy · ${SUFIJO}`
   if (ruta === '/app/solicitudes') return `Solicitudes · ${SUFIJO}`
@@ -117,6 +120,7 @@ export const PREFIJOS_PRIVADOS = [
   '/instalar',
   '/mi',
   '/registro',
+  '/recuperar',
 ] as const
 
 /**

@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest'
 import {
   USERNAMES_RESERVADOS,
   normalizarCelularRegistro,
+  normalizarCodigo,
   normalizarCorreoRegistro,
+  normalizarIdentificador,
   normalizarUsername,
   validarCelular,
   validarCelularRegistro,
   validarContrasena,
+  validarCodigo,
   validarCorreoRegistro,
+  validarIdentificador,
   validarNombreRegistro,
   validarPerfilCliente,
   validarUsername,
@@ -151,18 +155,51 @@ describe('registro de cliente', () => {
     )
   })
 
-  it('acepta correo vacío y normaliza a minúsculas', () => {
-    expect(normalizarCorreoRegistro('   ')).toBeUndefined()
+  it('exige el correo y lo normaliza a minúsculas', () => {
+    expect(normalizarCorreoRegistro('   ')).toBe('')
     expect(normalizarCorreoRegistro(' Nuevo@Example.COM ')).toBe(
       'nuevo@example.com',
     )
-    expect(validarCorreoRegistro('')).toBeNull()
+    expect(validarCorreoRegistro('')).toBe('Escribe tu correo.')
+    expect(validarCorreoRegistro('   ')).toBe('Escribe tu correo.')
     expect(validarCorreoRegistro('nuevo@example.com')).toBeNull()
     expect(validarCorreoRegistro('no-es-correo')).toBe(
       'Escribe un correo válido.',
     )
     expect(validarCorreoRegistro(`${'a'.repeat(250)}@x.com`)).toBe(
       'El correo no puede superar 255 caracteres.',
+    )
+  })
+})
+
+describe('código de verificación', () => {
+  it('deja solo dígitos, corta a 6 y conserva los ceros a la izquierda', () => {
+    expect(normalizarCodigo('012345')).toBe('012345')
+    expect(normalizarCodigo(' 01 23-45 ')).toBe('012345')
+    expect(normalizarCodigo('0123456789')).toBe('012345')
+    expect(normalizarCodigo('abc')).toBe('')
+  })
+
+  it('exige exactamente 6 dígitos', () => {
+    expect(validarCodigo('012345')).toBeNull()
+    expect(validarCodigo('12345')).toBe('El código debe tener 6 dígitos.')
+    expect(validarCodigo('')).toBe('El código debe tener 6 dígitos.')
+  })
+})
+
+describe('identificador de recuperación', () => {
+  it('acepta username o correo de 3 a 255 caracteres', () => {
+    expect(validarIdentificador('ana')).toBeNull()
+    expect(validarIdentificador('nuevo@example.com')).toBeNull()
+    expect(validarIdentificador('  ab ')).toBe('Escribe tu usuario o tu correo.')
+    expect(validarIdentificador('a'.repeat(256))).toBe(
+      'No puede superar 255 caracteres.',
+    )
+  })
+
+  it('normaliza a minúsculas sin espacios', () => {
+    expect(normalizarIdentificador('  Nuevo@Example.COM ')).toBe(
+      'nuevo@example.com',
     )
   })
 })

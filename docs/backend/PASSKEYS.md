@@ -4,6 +4,10 @@ El cliente registra una passkey desde su dispositivo y luego inicia sesión con
 huella, rostro o PIN **sin escribir usuario**. Solo aplica a clientes (no
 barberos ni admin).
 
+El registro **prefiere el autenticador del propio dispositivo**: el navegador
+ofrece la huella, el rostro o el PIN de Windows Hello antes que un teléfono por
+QR o una llave de seguridad externa.
+
 > El flujo REAL de crear/usar una passkey **no se puede probar en Thunder
 > Client**: requiere un autenticador (Touch ID, Windows Hello, huella del
 > teléfono). Eso se valida con el frontend en un dispositivo. Con HTTP solo se
@@ -42,6 +46,29 @@ de verificación o credencial desconocida responde el mismo
 `401 { message: 'No se pudo iniciar sesión con la passkey' }`. Cliente
 desactivado → `403` **después** de verificar. El JWT se emite con
 `metodo: 'passkey'`.
+
+---
+
+## Registro con el autenticador del dispositivo
+
+`generarOpcionesRegistro` usa `preferredAuthenticatorType: 'localDevice'`, que
+`@simplewebauthn/server` traduce a:
+
+- `hints: ['client-device']`
+- `authenticatorSelection.authenticatorAttachment: 'platform'`
+- `residentKey: 'required'` y `userVerification: 'required'` (passkey
+  descubrible, con verificación por huella, rostro o PIN)
+- `attestationType: 'none'` y `excludeCredentials` sin cambios
+
+Efecto en el navegador:
+
+- En un equipo con huella o rostro, ofrece Windows Hello / Touch ID.
+- En un PC sin lector de huella, Windows pide el **PIN** del equipo.
+- Si Windows Hello no está configurado, el navegador puede seguir ofreciendo
+  otro dispositivo (QR o llave de seguridad).
+
+`generarOpcionesLogin` **no cambia**: el login sigue siendo descubrible, sin
+`allowCredentials` ni `authenticatorAttachment`.
 
 ---
 
@@ -85,9 +112,15 @@ WEBAUTHN_RP_NAME=KlippFlow                # opcional (default KlippFlow)
 WEBAUTHN_ORIGINS=http://localhost:3001    # prod: https://klippflow.vercel.app
 ```
 
+- `WEBAUTHN_RP_ID` es **solo el dominio**: sin protocolo, ruta ni puerto. Un
+  valor como `http://localhost:3001` es inválido e invalida la configuración.
+- `WEBAUTHN_ORIGINS` son **orígenes completos**, con esquema y puerto si aplica
+  (`http://localhost:3001`, `https://klippflow.vercel.app`).
+
 `WEBAUTHN_ORIGINS` acepta una lista separada por comas (por ejemplo desarrollo
 y producción a la vez). Se leen de forma **perezosa**: si faltan, la app
 arranca y los endpoints de passkeys responden `503 Passkeys no configuradas`.
+Lo mismo ocurre si `WEBAUTHN_RP_ID` contiene `://` o `:`.
 
 ---
 
@@ -113,4 +146,4 @@ arranca y los endpoints de passkeys responden `503 Passkeys no configuradas`.
 | `403` | token de barbero en endpoints de cliente; cliente desactivado al iniciar sesión |
 | `404` | passkey ajena o inexistente al borrar |
 | `409` | 5 passkeys o `credential_id` repetido |
-| `503` | faltan `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGINS` |
+| `503` | faltan `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGINS` o `WEBAUTHN_RP_ID` contiene `://` o `:` |

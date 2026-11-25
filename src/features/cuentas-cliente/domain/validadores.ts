@@ -107,15 +107,15 @@ export function validarNombreRegistro(nombre: string): string | null {
   return null
 }
 
-/** Correo opcional: vacío es válido; si viene, máximo 255 y formato válido. */
-export function normalizarCorreoRegistro(correo: string): string | undefined {
-  const limpio = correo.trim().toLowerCase()
-  return limpio === '' ? undefined : limpio
+/** Correo obligatorio: se envía sin espacios y en minúsculas. */
+export function normalizarCorreoRegistro(correo: string): string {
+  return correo.trim().toLowerCase()
 }
 
+/** Correo obligatorio: máximo 255 caracteres y formato válido. */
 export function validarCorreoRegistro(correo: string): string | null {
   const limpio = normalizarCorreoRegistro(correo)
-  if (!limpio) return null
+  if (!limpio) return 'Escribe tu correo.'
   if (limpio.length > LARGO_MAXIMO_CORREO) {
     return `El correo no puede superar ${LARGO_MAXIMO_CORREO} caracteres.`
   }
@@ -123,6 +123,39 @@ export function validarCorreoRegistro(correo: string): string | null {
     return 'Escribe un correo válido.'
   }
   return null
+}
+
+export const LARGO_CODIGO = 6
+
+/**
+ * Código de verificación o recuperación: solo dígitos, máximo 6. Siempre se
+ * guarda como string para conservar los ceros a la izquierda.
+ */
+export function normalizarCodigo(valor: string): string {
+  return valor.replace(/\D/g, '').slice(0, LARGO_CODIGO)
+}
+
+export function validarCodigo(codigo: string): string | null {
+  return /^\d{6}$/.test(codigo) ? null : 'El código debe tener 6 dígitos.'
+}
+
+export const LARGO_MINIMO_IDENTIFICADOR = 3
+
+/** Username o correo para recuperar la contraseña (3 a 255 caracteres). */
+export function validarIdentificador(valor: string): string | null {
+  const limpio = valor.trim()
+  if (limpio.length < LARGO_MINIMO_IDENTIFICADOR) {
+    return 'Escribe tu usuario o tu correo.'
+  }
+  if (limpio.length > LARGO_MAXIMO_CORREO) {
+    return `No puede superar ${LARGO_MAXIMO_CORREO} caracteres.`
+  }
+  return null
+}
+
+/** Normaliza el identificador: los correos y usernames se guardan en minúsculas. */
+export function normalizarIdentificador(valor: string): string {
+  return valor.trim().toLowerCase()
 }
 
 export interface ErroresPerfil {

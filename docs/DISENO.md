@@ -126,11 +126,29 @@ La raíz `/` redirige a `/app/hoy` si hay sesión de barbero y a `/login` si no.
 ## 6. Pantallas
 
 ### 6.1 Login (`/login`)
-- Logo arriba (210 px con la sombra del login y un halo blanco al 5 %), marca "KlippFlow" (48 px), lema "Tus citas, tu caja y tu agenda. Un solo lugar, en tu bolsillo.", campos USUARIO y CONTRASEÑA, botón "Entrar" (principal, desactivado hasta tener ambos), aviso "Tu cuenta la crea el administrador de KlippFlow. Si no puedes entrar, tu cuenta puede estar suspendida o vencida."
-- No hay enlace para clientes ni botón de volver.
-- Endpoint: `POST /auth/login/barbero` → guarda `accessToken` y el nombre del barbero.
-- Errores: 401 "Usuario o contraseña incorrectos"; 403 "Tu cuenta no está activa. Habla con el administrador de KlippFlow."; 429 "Demasiados intentos. Espera un minuto e inténtalo de nuevo."; sin red "No pudimos conectar. Revisa tu internet."
-- Tras entrar: si es iPhone, la app está abierta en Safari (no instalada) y no se descartó el onboarding, va a `/instalar`; si no, a `/app/hoy`.
+- Encabezado compacto: logo `md` (72 px) con la sombra del login y un halo blanco al 5 % (círculo de 200 px) y la marca “KlippFlow” (48 px, `h1`). Sin lema.
+- Selector `Segmented` “Barbero / Cliente” (`aria-label` “Tipo de cuenta”). No cambia el endpoint: decide qué accesos se ven. La pestaña elegida se recuerda en el dispositivo (`kf_login_pestana` en `localStorage`, con try/catch); si la URL trae `volver`, siempre abre en Cliente.
+  - **Cliente** (por defecto): botón de Google, botón “Entrar con passkey” (o “Entrar con huella o PIN” si ya hay una guardada; solo si el navegador soporta WebAuthn), separador “o” y, siempre visibles, USUARIO, CONTRASEÑA, “¿Olvidaste tu contraseña?” y “Entrar”. Al pie, “¿Primera vez? Crea tu cuenta” y “Al continuar con Google aceptas la Política de privacidad.”
+  - **Barbero**: solo USUARIO, CONTRASEÑA y “Entrar” (principal, desactivado hasta tener ambos), y el enlace “¿Problemas para entrar?”. Sin Google, passkey ni recuperación: la cuenta y la contraseña las da el administrador. Al pie, la Política de privacidad.
+  - Si un barbero entra con contraseña desde la pestaña Cliente, se guarda “Barbero” para la próxima vez.
+- El antiguo aviso de cuenta y el texto de restablecimiento viven en el `Sheet` “¿Problemas para entrar?”: “Tu cuenta la crea el administrador de KlippFlow.”, “Si no puedes entrar, tu cuenta puede estar suspendida o vencida.” y “Pide al administrador que restablezca tu contraseña.”
+- La Política de privacidad aparece una sola vez por pestaña, siempre en el pie.
+- Endpoint: `POST /auth/login` (unificado) → guarda `accessToken` y el tipo de sesión.
+- Errores: 401 “Usuario o contraseña incorrectos”; 403 de correo sin verificar → pantalla “Verifica tu correo” (`/registro/verificar`); otro 403 “Tu cuenta no está activa. Habla con el administrador de KlippFlow.”; 429 “Demasiados intentos. Espera un minuto e inténtalo de nuevo.”; sin red “No pudimos conectar. Revisa tu internet.”
+- Tras entrar: si es iPhone, la app está abierta en Safari (no instalada) y no se descartó el onboarding, va a `/instalar`; si no, a `/app/hoy`. Los clientes van a `/mi` o al `volver` seguro.
+- “¿Olvidaste tu contraseña?” lleva a `/recuperar` (código al correo) y conserva `volver`.
+- Recuperación con Google (`/login?recuperar=1`): vía secundaria. Título “Recupera tu cuenta de cliente”, texto “¿Te registraste con Google? Entra con Google para crear una contraseña nueva.”, la aceptación de Google, “Recuperar con un código al correo” y “Volver a entrar”.
+- Aviso verde con `?motivo=contrasena-restablecida`: “Contraseña actualizada. Entra con tu nueva contraseña.”
+
+### 6.1.1 Verifica tu correo (`/registro/verificar`)
+- Logo `sm`, título “Verifica tu correo” y texto “Escribe el código de 6 dígitos que enviamos a **{correo}**. Vence en 15 minutos.” Sin correo conocido, campo “Correo electrónico”.
+- Campo “Código de 6 dígitos” (numérico, `000000`, espaciado ancho), “Verificar” (principal) y “Reenviar código” (ghost; durante 60 s muestra “Reenviar en 0:42”).
+- Aviso verde con el mensaje del backend; errores en rojo. Ayuda: “Máximo 5 intentos por código. Pedir uno nuevo invalida el anterior.” Enlace “Volver a entrar”.
+
+### 6.1.2 Recupera tu contraseña (`/recuperar`)
+- Paso 1: “Usuario o correo” y “Enviar código”.
+- Paso 2: “Cuenta: {identificador} · Cambiar”, código, “Nueva contraseña” (con mostrar/ocultar), “Guardar contraseña” y “Reenviar código” con la misma espera de 60 s.
+- Enlaces: “¿Te registraste con Google? Entra con Google” (`/login?recuperar=1`) y “Volver a entrar”.
 
 ### 6.2 Instalar (`/instalar`)
 - Eyebrow "ANTES DE EMPEZAR · 1 MINUTO", título "Instala la app para no perder ninguna cita", texto "En iPhone, las notificaciones solo llegan si KlippFlow está en tu pantalla de inicio."
@@ -228,7 +246,7 @@ La raíz `/` redirige a `/app/hoy` si hay sesión de barbero y a `/login` si no.
 
 ### 6.12 Panel de administración (dueño de la plataforma)
 Diseño propio del panel, mismo estilo visual, pensado para móvil y escritorio.
-- `/admin/login`: igual que el login del barbero pero con la marca y el texto "Administración", sin aviso de cuenta ni enlaces. Endpoint `POST /auth/login/admin`. Token de admin guardado aparte del de barbero. Errores como en el login del barbero.
+- `/admin/login`: misma estructura que el login del barbero (logo, eyebrow, título, campos y botón) pero con el texto "Administración", sin selector de tipo de cuenta, sin aviso de cuenta y sin enlaces. Endpoint `POST /auth/login/admin`. Token de admin guardado aparte del de barbero. Errores como en el login del barbero.
 - `/admin` (lista): título "Barberos", buscador (usuario o barbería), chips de filtro (Todos, Activos, Suspendidos, Vencidos), botón "+ Nuevo barbero". Cada fila: nombre de la barbería, usuario en mono y badge de estado (activo verde, suspendido ámbar, vencido rojo). Paginación con "Cargar más". Endpoint `GET /admin/barberos`.
 - Sheet "Nuevo barbero": USUARIO (minúsculas, números, punto, guion y guion bajo; 3 a 50), CONTRASEÑA (8 a 72, con botón para mostrarla), y los campos de nombre, barbería y correo opcional que pida el backend (`docs/backend/ADMIN.md`). Tras crear: tarjeta "Entrega estos datos al barbero" con usuario, contraseña (se muestra una sola vez), código y link, y botón "Copiar mensaje" con un texto listo para pegar por WhatsApp.
 - `/admin/barberos/:id` (detalle): datos del barbero, código y link con "Copiar"; control de estado Activo / Suspendido / Vencido (cambiar pide confirmación y explica el efecto: "No podrá iniciar sesión ni recibir reservas"); botón "Rotar código" con confirmación en rojo ("Los links ya compartidos dejarán de funcionar. Las citas existentes siguen funcionando"); botón "Restablecer contraseña" (sheet con campo nuevo, 8 a 72). Aviso: "Los tokens ya emitidos no se revocan; expiran por sí solos." Cierre de sesión del admin.
@@ -452,3 +470,23 @@ sistema visual (tokens, tipografías y kit).
 - **Celular reutilizado:** se usa `normalizarCelular` de la reserva pública, no una segunda regex.
 - **400 estrictos:** los mensajes de negocio se comparan con `^servicio no válido$` para no secuestrar la validación por campos (`servicioIds should not be empty`), que se muestra tal cual.
 
+### Decisiones del rediseño del login (2026-11-24)
+
+- **Selector antes que dos pantallas:** el login unificado acumulaba nueve textos explicativos y tres llamadas a la acción. Se eligió un `Segmented` Barbero/Cliente en la misma pantalla (no rutas separadas) para no romper enlaces existentes ni duplicar el formulario: el endpoint sigue siendo `POST /auth/login`.
+- **El formulario de usuario y contraseña se mantiene en ambas pestañas:** los clientes también pueden entrar con credenciales (las crea `/registro`), así que el selector solo cambia los accesos adicionales (Google, recuperación, passkey y registro). Esto conserva el comportamiento de login de los barberos y de los clientes con contraseña.
+- **El texto instructivo pasa a un `Sheet`:** «Tu cuenta la crea el administrador…», el aviso de cuenta suspendida y el restablecimiento solo se ven al pulsar «¿Problemas para entrar?». Se elimina la duplicación entre el formulario y la pantalla de recuperación.
+- **Passkey siempre visible en Cliente:** el acceso con passkey se muestra siempre que el navegador la soporte en la pestaña Cliente (texto «Entrar con huella o PIN» si ya hay una guardada, «Entrar con passkey» si no). Se retiró el helper «Solo para cuentas de cliente», que la pestaña ya hace evidente; también deja de estar arriba del formulario como acción principal, para que no compita con «Entrar».
+- **Una sola Política de privacidad por pestaña:** en Barbero queda en el pie; en Cliente la cubre la línea de aceptación de Google. Antes se repetía en la misma pantalla.
+- **Encabezado intacto:** se conserva el del diseño original (logo 104 px, «KlippFlow» en 48 px como `h1` y el lema en 15 px). «Entrar» y «Recupera tu cuenta de cliente» quedan como `h2` de sección, como estaban.
+- **`volver` se conserva en el enlace de recuperación:** antes se perdía, y el cliente volvía a `/mi` en vez de a la cita que estaba reservando.
+- **One Tap desactivado:** `disableAutoSelect()` y `cancel()` tras `renderButton`. La tarjeta «Continuar como…» se dibuja fuera del shell de 900 px y tapaba el campo de contraseña.
+- **El aviso `motivo` se mantiene fuera de las pestañas:** «sesión caducada» y «cuenta no activa» siguen siendo visibles en cuanto se entra, sin importar la pestaña.
+
+### Ajuste del login: opción C (2026-11-24)
+
+- **El selector se queda:** los barberos no usan Google ni passkeys; entran con el usuario y la contraseña que les da el administrador. Cada pestaña muestra solo lo suyo.
+- **Formulario del cliente siempre visible:** se probó plegarlo tras “Entrar con usuario y contraseña ▾”, pero el dueño prefirió que el cliente vea siempre los campos y el botón “Entrar”. Se mantiene el separador “o” entre Google/passkey y el formulario, y se retira el título “Entrar”.
+- **Passkey como botón, no enlace:** misma altura que Google (48 px), variante ghost con borde e ícono de huella.
+- **Pestaña recordada por dispositivo:** el barbero elige “Barbero” una vez. `volver` fuerza Cliente porque viene de una reserva.
+- **Encabezado reducido:** logo de 104 a 72 px y sin lema, para que los accesos queden más arriba.
+- **Un solo lugar para el error:** el error de contraseña o de Google aparece encima de “Entrar”; el de passkey, bajo su botón.

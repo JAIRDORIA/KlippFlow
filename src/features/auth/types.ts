@@ -100,12 +100,36 @@ export interface DatosRegistroCliente {
   username: string
   contrasena: string
   celular: string
-  /** Opcional: se omite del cuerpo si viene vacío. */
-  correo?: string
+  /** Obligatorio: es el correo que se verifica con un código de 6 dígitos. */
+  correo: string
 }
 
-/** Misma forma que el login de cliente; se guarda con el mismo mecanismo. */
-export type RespuestaRegistroCliente = RespuestaLoginCliente
+/** El registro ya no inicia sesión: hay que verificar el correo primero. */
+export interface RespuestaRegistroCliente {
+  requiereVerificacion: true
+  correo: string
+  mensaje: string
+}
+
+/** `POST /auth/cliente/verificar-correo`. El código va como string (ceros a la izquierda). */
+export interface DatosVerificarCorreo {
+  correo: string
+  codigo: string
+}
+
+/** Respuesta genérica de reenviar código y recuperar contraseña. */
+export interface RespuestaMensajeOk {
+  ok: true
+  mensaje: string
+}
+
+/** `POST /auth/cliente/restablecer-password`. */
+export interface DatosRestablecerPassword {
+  /** Username o correo, el mismo que se usó al pedir el código. */
+  identificador: string
+  codigo: string
+  nuevaContrasena: string
+}
 
 export interface PerfilCliente {
   id: number
