@@ -140,8 +140,44 @@ export function mapearErrorPasskey(
       silencioso: false,
     }
   }
+  if (
+    contexto === 'registro' &&
+    (nombre === 'ConstraintError' || nombre === 'NotSupportedError')
+  ) {
+    return {
+      mensaje: `Este dispositivo no pudo crear la passkey. Revisa que tenga bloqueo de pantalla con huella o PIN. ${detalleTecnico(error)}`,
+      silencioso: false,
+    }
+  }
 
-  return { mensaje: MENSAJE_GENERICO, silencioso: false }
+  // Errores del navegador no previstos: se deja el código para poder
+  // diagnosticarlos desde el celular, donde no hay consola.
+  console.error('[passkeys]', error)
+  const detalle = detalleTecnico(error)
+  return {
+    mensaje: detalle ? `${MENSAJE_GENERICO} ${detalle}` : MENSAJE_GENERICO,
+    silencioso: false,
+  }
+}
+
+/** `(código)` corto de un error de WebAuthn o del navegador; '' si no hay. */
+function detalleTecnico(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return ''
+
+  const { code, name, message } = error as {
+    code?: unknown
+    name?: unknown
+    message?: unknown
+  }
+  const partes = [code, name].filter(
+    (valor): valor is string =>
+      typeof valor === 'string' && valor !== '' && valor !== 'Error',
+  )
+  if (partes.length === 0 && typeof message === 'string' && message) {
+    partes.push(message.slice(0, 80))
+  }
+
+  return partes.length > 0 ? `(${partes.join(' · ')})` : ''
 }
 
 export function nombreSugeridoDispositivo(

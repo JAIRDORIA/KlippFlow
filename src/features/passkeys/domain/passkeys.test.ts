@@ -101,16 +101,40 @@ describe('mapearErrorPasskey', () => {
         'login',
       ),
     ).toEqual({
-      mensaje: 'No pudimos completar la operación. Inténtalo de nuevo.',
+      mensaje:
+        'No pudimos completar la operación. Inténtalo de nuevo. (InvalidStateError)',
       silencioso: false,
     })
   })
 
   it('usa genérico para desconocidos', () => {
-    expect(mapearErrorPasskey(new Error('boom'))).toEqual({
+    expect(mapearErrorPasskey(null)).toEqual({
       mensaje: 'No pudimos completar la operación. Inténtalo de nuevo.',
       silencioso: false,
     })
+  })
+
+  it('añade el detalle técnico a errores del navegador no previstos', () => {
+    expect(mapearErrorPasskey(new Error('boom')).mensaje).toBe(
+      'No pudimos completar la operación. Inténtalo de nuevo. (boom)',
+    )
+    // Forma del WebAuthnError de @simplewebauthn/browser.
+    const webauthn = Object.assign(new Error('x'), {
+      name: 'SecurityError',
+      code: 'ERROR_INVALID_RP_ID',
+    })
+    expect(mapearErrorPasskey(webauthn).mensaje).toBe(
+      'No pudimos completar la operación. Inténtalo de nuevo. (ERROR_INVALID_RP_ID · SecurityError)',
+    )
+  })
+
+  it('explica cuando el dispositivo no puede crear la passkey', () => {
+    const mapeado = mapearErrorPasskey(
+      new DOMException('x', 'NotSupportedError'),
+      'registro',
+    )
+    expect(mapeado.mensaje).toContain('bloqueo de pantalla')
+    expect(mapeado.mensaje).toContain('(NotSupportedError)')
   })
 })
 
