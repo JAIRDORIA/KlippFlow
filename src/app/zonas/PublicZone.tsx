@@ -6,8 +6,10 @@ import { MiCitasPage } from '@/features/cuentas-cliente/MiCitasPage'
 import { MiInstalarPage } from '@/features/cuentas-cliente/MiInstalarPage'
 import { MiPage } from '@/features/cuentas-cliente/MiPage'
 import { NuevaContrasenaPage } from '@/features/cuentas-cliente/NuevaContrasenaPage'
+import { RecuperarPasswordPage } from '@/features/cuentas-cliente/RecuperarPasswordPage'
 import { RegistroPage } from '@/features/cuentas-cliente/RegistroPage'
 import { useInvalidarCitasPush } from '@/features/cuentas-cliente/useInvalidarCitasPush'
+import { VerificarCorreoPage } from '@/features/cuentas-cliente/VerificarCorreoPage'
 import { PrivacidadPage } from '@/features/legal/PrivacidadPage'
 import { MiSeguridadPage } from '@/features/passkeys/MiSeguridadPage'
 import { SincronizadorNotificaciones } from '@/features/notificaciones/SincronizadorNotificaciones'
@@ -80,6 +82,8 @@ export default function PublicZone() {
         />
         <Route path="registro" element={<RegistroPage />} />
         <Route path="registro/completar" element={<CompletarCuentaPage />} />
+        <Route path="registro/verificar" element={<VerificarCorreoPage />} />
+        <Route path="recuperar" element={<RecuperarPasswordPage />} />
       </Routes>
     </>
   )

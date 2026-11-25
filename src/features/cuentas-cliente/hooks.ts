@@ -14,7 +14,10 @@ import type {
   RespuestaGoogle,
   RespuestaLogin,
   RespuestaLoginCliente,
+  RespuestaMensajeOk,
   RespuestaRegistroCliente,
+  DatosRestablecerPassword,
+  DatosVerificarCorreo,
 } from '@/features/auth/types'
 import { ErrorPeticion } from '@/shared/api/client'
 import {
@@ -30,7 +33,11 @@ import {
   obtenerCitasCliente,
   obtenerPerfil,
   rechazarCambioHora,
+  reenviarCodigoVerificacion,
   registrarCliente,
+  restablecerPassword,
+  solicitarRecuperacionPassword,
+  verificarCorreo,
   vincularBarbero,
 } from './api'
 import type {
@@ -98,32 +105,44 @@ export function useLoginGoogle() {
   })
 }
 
+/** El registro ya no inicia sesión: la sesión llega al verificar el correo. */
 export function useRegistroCliente() {
-  const {
-    iniciarSesion,
-    actualizarPerfil: actualizarPerfilSesion,
-  } = useAuth()
-  const queryClient = useQueryClient()
-
   return useMutation<
     RespuestaRegistroCliente,
     unknown,
     DatosRegistroCliente
   >({
     mutationFn: registrarCliente,
-    onSuccess: (respuesta) => {
-      // Mismo mecanismo que el login: guarda token y cliente en la ranura única.
-      iniciarSesion(respuesta)
+  })
+}
 
-      // Refresca el perfil real con GET /cliente/perfil. Si falla, la cuenta ya
-      // quedó creada y la sesión guardada sigue siendo válida.
-      void obtenerPerfil()
-        .then((perfil) => {
-          actualizarPerfilSesion(perfil)
-          queryClient.setQueryData(clavesCliente.perfil, perfil)
-        })
-        .catch(() => undefined)
+/** Verifica el correo con el código; la respuesta es una sesión de cliente. */
+export function useVerificarCorreo() {
+  const { iniciarSesion } = useAuth()
+
+  return useMutation<RespuestaLoginCliente, unknown, DatosVerificarCorreo>({
+    mutationFn: verificarCorreo,
+    onSuccess: (respuesta) => {
+      iniciarSesion(respuesta)
     },
+  })
+}
+
+export function useReenviarCodigoVerificacion() {
+  return useMutation<RespuestaMensajeOk, unknown, string>({
+    mutationFn: reenviarCodigoVerificacion,
+  })
+}
+
+export function useSolicitarRecuperacion() {
+  return useMutation<RespuestaMensajeOk, unknown, string>({
+    mutationFn: solicitarRecuperacionPassword,
+  })
+}
+
+export function useRestablecerPassword() {
+  return useMutation<{ ok: true }, unknown, DatosRestablecerPassword>({
+    mutationFn: restablecerPassword,
   })
 }
 

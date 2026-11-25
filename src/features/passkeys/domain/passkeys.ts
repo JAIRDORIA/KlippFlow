@@ -95,6 +95,13 @@ export function mapearErrorPasskey(
         silencioso: false,
       }
     }
+    if (error.status === 403) {
+      // Correo sin verificar o cuenta desactivada: el texto del backend es claro.
+      return {
+        mensaje: error.mensaje || MENSAJE_GENERICO,
+        silencioso: false,
+      }
+    }
     if (error.status === 409) {
       return {
         mensaje: 'Ya tienes 5 passkeys. Borra una para agregar otra.',

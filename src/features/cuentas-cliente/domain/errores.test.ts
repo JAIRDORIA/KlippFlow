@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ErrorPeticion } from '@/shared/api/client'
 import {
+  esCorreoSinVerificar,
+  mapearErrorCodigo,
   mapearErrorCompletarCuenta,
   mapearErrorContrasena,
   mapearErrorCreacionCliente,
@@ -8,6 +10,7 @@ import {
   mapearErrorLogin,
   mapearErrorPerfil,
   mapearErrorRegistro,
+  mapearErrorSolicitudCodigo,
 } from './errores'
 
 function error(status: number, mensaje = 'x', campos?: string[]) {
@@ -167,5 +170,58 @@ describe('mapearErrorRegistro', () => {
     expect(mapearErrorRegistro(error(0)).mensaje).toBe(
       'No pudimos conectar. Revisa tu internet.',
     )
+  })
+})
+
+describe('correo sin verificar', () => {
+  const sinVerificar = error(403, 'Debes verificar tu correo antes de iniciar sesión')
+
+  it('distingue el 403 de correo sin verificar del de cuenta inactiva', () => {
+    expect(esCorreoSinVerificar(sinVerificar)).toBe(true)
+    expect(esCorreoSinVerificar(error(403, 'Tu cuenta de cliente está desactivada'))).toBe(false)
+    expect(esCorreoSinVerificar(error(400, 'Debes verificar tu correo'))).toBe(false)
+    expect(esCorreoSinVerificar(new Error('x'))).toBe(false)
+  })
+
+  it('mapearErrorLogin muestra el mensaje de verificación', () => {
+    expect(mapearErrorLogin(sinVerificar)).toBe(
+      'Debes verificar tu correo antes de iniciar sesión',
+    )
+  })
+})
+
+describe('mapearErrorRegistro con correo', () => {
+  it('marca el correo en 409 de correo duplicado', () => {
+    const mapeado = mapearErrorRegistro(error(409, 'Ese correo ya está registrado'))
+    expect(mapeado.mensaje).toBe('Ese correo ya está registrado')
+    expect(mapeado.campos).toEqual({ correo: 'Ese correo ya está registrado' })
+  })
+})
+
+describe('mapearErrorCompletarCuenta con correo de cuenta local', () => {
+  it('conserva el texto que invita a iniciar sesión', () => {
+    const texto =
+      'Ya existe una cuenta con este correo. Inicia sesión con tu contraseña.'
+    expect(mapearErrorCompletarCuenta(error(409, texto))).toBe(texto)
+  })
+})
+
+describe('mapearErrorCodigo', () => {
+  it('muestra los 400 del backend', () => {
+    expect(mapearErrorCodigo(error(400, 'Código inválido o vencido'))).toBe(
+      'Código inválido o vencido',
+    )
+    expect(mapearErrorCodigo(error(400, 'El correo ya está verificado'))).toBe(
+      'El correo ya está verificado',
+    )
+    expect(
+      mapearErrorCodigo(error(400, 'x', ['El código debe tener 6 dígitos'])),
+    ).toBe('El código debe tener 6 dígitos')
+  })
+
+  it('traduce 429 y red', () => {
+    expect(mapearErrorCodigo(error(429))).toContain('Demasiados intentos')
+    expect(mapearErrorCodigo(error(0))).toContain('No pudimos conectar')
+    expect(mapearErrorSolicitudCodigo(error(429))).toContain('Demasiados intentos')
   })
 })

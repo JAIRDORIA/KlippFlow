@@ -37,6 +37,10 @@ describe('CompletarCuentaPage', () => {
     expect(
       await screen.findByText('Vuelve a continuar con Google'),
     ).toBeInTheDocument()
-    expect(screen.getByLabelText('Usuario')).toBeInTheDocument()
+    // Vuelve al acceso de cliente, donde está el botón de Google.
+    expect(screen.getByRole('radio', { name: 'Cliente' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
   })
 })

@@ -153,12 +153,12 @@ export function NuevaContrasenaPage() {
 
           {esPasskey && (
             <p className="type-helper">
-              ¿Olvidaste tu contraseña actual? Entra con Google desde{' '}
+              ¿Olvidaste tu contraseña actual?{' '}
               <Link
-                to="/login?recuperar=1"
+                to="/recuperar"
                 className="underline underline-offset-2 hover:text-text"
               >
-                /login?recuperar=1
+                Recupérala con un código al correo
               </Link>
               .
             </p>

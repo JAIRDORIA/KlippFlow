@@ -49,9 +49,10 @@ al cargar la página.
 
 ## Pantallas
 
-- `/login`: si `kf_passkey` existe, “Entrar con huella o PIN” va arriba del
-  formulario como acción principal. Si no, “Entrar con passkey” va abajo, junto
-  al bloque de Google. Siempre con “Solo para cuentas de cliente.”
+- `/login`: con la pestaña Cliente activa y WebAuthn disponible, el acceso va
+  como botón con ícono de huella bajo el de Google: “Entrar con huella o PIN”
+  si `kf_passkey` existe, “Entrar con passkey” si no. En la pestaña Barbero no
+  se muestra (las passkeys son de cliente).
 - `/mi`: tarjeta descartable “Entra más rápido con tu huella, rostro o PIN” si
   el dispositivo soporta WebAuthn, tiene autenticador de plataforma, no tiene la
   marca y no se descartó en los últimos 30 días.

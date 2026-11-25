@@ -12,14 +12,35 @@ function mensajeDeApi(error: ErrorPeticion): string {
 
 function mensajeConflicto(mensaje: string): string | null {
   if (/google/i.test(mensaje)) return 'Ya existe una cuenta para este Google'
+  if (/correo/i.test(mensaje)) {
+    return /inicia sesi[oó]n/i.test(mensaje)
+      ? mensaje
+      : 'Ese correo ya está registrado'
+  }
   if (/usuario|uso/i.test(mensaje)) return 'Ese usuario ya está en uso'
   return null
+}
+
+export const MENSAJE_CORREO_SIN_VERIFICAR =
+  'Debes verificar tu correo antes de iniciar sesión'
+
+/**
+ * 403 del login (contraseña o passkey) de un cliente que aún no confirmó su
+ * correo. Se distingue del 403 de cuenta inactiva por el mensaje.
+ */
+export function esCorreoSinVerificar(error: unknown): boolean {
+  return (
+    error instanceof ErrorPeticion &&
+    error.status === 403 &&
+    /verificar tu correo/i.test(error.mensaje)
+  )
 }
 
 export function mapearErrorLogin(error: unknown): string {
   if (!(error instanceof ErrorPeticion)) return MENSAJE_GENERICO
 
   if (error.status === 401) return 'Usuario o contraseña incorrectos'
+  if (esCorreoSinVerificar(error)) return MENSAJE_CORREO_SIN_VERIFICAR
   if (error.status === 403) {
     return 'Tu cuenta no está activa. Habla con el administrador de KlippFlow.'
   }
@@ -70,6 +91,37 @@ export function mapearErrorContrasena(error: unknown): string {
   if (error.status === 429) return 'Demasiados intentos, espera un momento'
   if (error.status === 0) return MENSAJE_RED
   if (error.status === 401) return error.mensaje || MENSAJE_GENERICO
+
+  return MENSAJE_GENERICO
+}
+
+/**
+ * Errores de verificar correo y restablecer contraseña: el 400 trae el texto
+ * del backend ("Código inválido o vencido", "El correo ya está verificado",
+ * reglas de contraseña…).
+ */
+export function mapearErrorCodigo(error: unknown): string {
+  if (!(error instanceof ErrorPeticion)) return MENSAJE_GENERICO
+
+  if (error.status === 400) return mensajeDeApi(error)
+  if (error.status === 403) return error.mensaje || MENSAJE_GENERICO
+  if (error.status === 429) {
+    return 'Demasiados intentos. Espera unos minutos antes de reintentar.'
+  }
+  if (error.status === 0) return MENSAJE_RED
+
+  return MENSAJE_GENERICO
+}
+
+/** Errores de reenviar código y pedir recuperación (respuesta genérica). */
+export function mapearErrorSolicitudCodigo(error: unknown): string {
+  if (!(error instanceof ErrorPeticion)) return MENSAJE_GENERICO
+
+  if (error.status === 429) {
+    return 'Demasiados intentos. Espera unos minutos antes de pedir otro código.'
+  }
+  if (error.status === 0) return MENSAJE_RED
+  if (error.status === 400) return mensajeDeApi(error)
 
   return MENSAJE_GENERICO
 }
@@ -273,6 +325,10 @@ export function mapearErrorRegistro(error: unknown): ErrorRegistroMapeado {
   }
 
   if (error.status === 409) {
+    if (/correo/i.test(error.mensaje)) {
+      const mensaje = 'Ese correo ya está registrado'
+      return { mensaje, detalle: [mensaje], campos: { correo: mensaje } }
+    }
     const mensaje = 'Ese usuario ya está en uso'
     return { mensaje, detalle: [mensaje], campos: { username: mensaje } }
   }

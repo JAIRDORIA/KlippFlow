@@ -31,6 +31,10 @@ interface OpcionesBotonGoogle {
 interface GoogleIdentityApi {
   initialize: (opciones: OpcionesInicializarGoogle) => void
   renderButton: (parent: HTMLElement, opciones: OpcionesBotonGoogle) => void
+  /** Evita el inicio automático en visitas siguientes. */
+  disableAutoSelect?: () => void
+  /** Cierra la tarjeta One Tap si ya se está mostrando. */
+  cancel?: () => void
 }
 
 declare global {

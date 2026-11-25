@@ -52,6 +52,12 @@ describe('mapearErrorPasskey', () => {
   })
 
   it('mapea tope 409, 429 y 503', () => {
+    expect(
+      mapearErrorPasskey(
+        error(403, 'Debes verificar tu correo antes de iniciar sesión'),
+        'login',
+      ).mensaje,
+    ).toBe('Debes verificar tu correo antes de iniciar sesión')
     expect(mapearErrorPasskey(error(409)).mensaje).toBe(
       'Ya tienes 5 passkeys. Borra una para agregar otra.',
     )

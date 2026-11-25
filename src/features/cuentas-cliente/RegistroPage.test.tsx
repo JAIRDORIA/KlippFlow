@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { CLAVE_SESION } from '@/shared/api/almacenamientoSesion'
 import { RegistroPage } from './RegistroPage'
@@ -13,6 +13,12 @@ function crearToken(payload: Record<string, unknown>): string {
     .replace(/\//g, '_')
     .replace(/=+$/, '')
   return `eyJhbGciOiJIUzI1NiJ9.${base64}.firma-simulada`
+}
+
+/** Muestra el estado con el que llegó la navegación a la verificación. */
+function VerificarEspia() {
+  const { state } = useLocation()
+  return <p>Verificar: {JSON.stringify(state)}</p>
 }
 
 function renderizarRegistro() {
@@ -30,6 +36,7 @@ function renderizarRegistro() {
           <Routes>
             <Route path="/registro" element={<RegistroPage />} />
             <Route path="/mi" element={<p>Mi cuenta</p>} />
+            <Route path="/registro/verificar" element={<VerificarEspia />} />
             <Route path="/login" element={<p>Entrar</p>} />
           </Routes>
         </MemoryRouter>
@@ -51,6 +58,9 @@ function completarFormulario() {
   fireEvent.change(screen.getByLabelText('Celular'), {
     target: { value: '+57 300 111 2233' },
   })
+  fireEvent.change(screen.getByLabelText('Correo electrónico'), {
+    target: { value: '  Nuevo@Example.COM ' },
+  })
   fireEvent.click(screen.getByRole('checkbox'))
 }
 
@@ -65,45 +75,21 @@ afterEach(() => {
 })
 
 describe('RegistroPage', () => {
-  it('crea la cuenta, guarda la sesión y omite el correo vacío', async () => {
-    const fetchMock = vi.fn(
-      async (entrada: RequestInfo | URL, opciones?: RequestInit) => {
-        const url = String(entrada)
-        const metodo = opciones?.method ?? 'GET'
-        if (metodo === 'POST' && url.endsWith('/auth/cliente/registro')) {
-          return new Response(
-            JSON.stringify({
-              accessToken: 'token-cliente-nuevo',
-              tipo: 'cliente',
-              cliente: {
-                id: 5,
-                nombre: 'Cliente Nuevo',
-                username: 'nuevo_cliente',
-                correo: null,
-                celular: '3001112233',
-              },
-            }),
-            {
-              status: 201,
-              headers: { 'Content-Type': 'application/json' },
-            },
-          )
-        }
-
-        return new Response(
+  it('crea la cuenta sin iniciar sesión y pasa a verificar el correo', async () => {
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(
           JSON.stringify({
-            id: 5,
-            nombre: 'Cliente Nuevo',
-            username: 'nuevo_cliente',
-            correo: null,
-            celular: '3001112233',
+            requiereVerificacion: true,
+            correo: 'nuevo@example.com',
+            mensaje:
+              'Cuenta creada. Te enviamos un código de 6 dígitos al correo para verificarla.',
           }),
           {
-            status: 200,
+            status: 201,
             headers: { 'Content-Type': 'application/json' },
           },
-        )
-      },
+        ),
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -115,36 +101,68 @@ describe('RegistroPage', () => {
     fireEvent.click(crear)
     fireEvent.click(crear)
 
-    expect(await screen.findByText('Mi cuenta')).toBeInTheDocument()
+    const destino = await screen.findByText(/^Verificar:/)
+    expect(destino.textContent).toContain('"correo":"nuevo@example.com"')
+    expect(destino.textContent).toContain('Te enviamos un código')
 
-    const llamadasRegistro = fetchMock.mock.calls.filter(([url]) =>
-      String(url).endsWith('/auth/cliente/registro'),
-    )
-    expect(llamadasRegistro).toHaveLength(1)
-    expect(llamadasRegistro[0]?.[1]?.body).toBe(
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, opciones] = fetchMock.mock.calls[0] ?? []
+    expect(String(url)).toMatch(/\/auth\/cliente\/registro$/)
+    expect(opciones?.body).toBe(
       JSON.stringify({
         nombre: 'Cliente Nuevo',
         username: 'nuevo_cliente',
         contrasena: 'ClaveSegura123',
         celular: '3001112233',
+        correo: 'nuevo@example.com',
       }),
     )
-    const cabeceras = llamadasRegistro[0]?.[1]?.headers
+    const cabeceras = opciones?.headers
     expect(cabeceras).toBeInstanceOf(Headers)
-    expect(cabeceras instanceof Headers ? cabeceras.get('Content-Type') : null).toBe(
-      'application/json',
-    )
     expect(cabeceras instanceof Headers ? cabeceras.get('Authorization') : null).toBeNull()
 
-    const sesion = JSON.parse(
-      window.localStorage.getItem(CLAVE_SESION) ?? '{}',
-    ) as {
-      token?: string
-      usuario?: { correo?: string | null }
-    }
-    expect(sesion.token).toBe('token-cliente-nuevo')
-    expect(sesion.usuario?.correo).toBeNull()
-    expect(JSON.stringify(sesion)).not.toContain('ClaveSegura123')
+    // El registro ya no devuelve token: no hay sesión hasta verificar.
+    expect(window.localStorage.getItem(CLAVE_SESION)).toBeNull()
+  })
+
+  it('no deja crear la cuenta sin correo', () => {
+    renderizarRegistro()
+    completarFormulario()
+    const campoCorreo = screen.getByLabelText('Correo electrónico')
+    fireEvent.change(campoCorreo, { target: { value: '' } })
+    fireEvent.blur(campoCorreo)
+
+    expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled()
+    expect(screen.getByText('Escribe tu correo.')).toBeInTheDocument()
+  })
+
+  it('marca el campo correo cuando el backend responde 409 de correo', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            message: 'Ese correo ya está registrado',
+            error: 'Conflict',
+            statusCode: 409,
+          }),
+          { status: 409, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    )
+
+    renderizarRegistro()
+    completarFormulario()
+    fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    expect(
+      (await screen.findAllByText('Ese correo ya está registrado')).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByLabelText('Correo electrónico')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+    expect(screen.getByLabelText('Usuario')).not.toHaveAttribute('aria-invalid')
   })
 
   it('marca el campo username cuando el backend responde 409', async () => {

@@ -63,6 +63,13 @@ export function BotonGoogle({
           logo_alignment: 'left',
           width: Math.min(400, Math.max(200, nodo.clientWidth || 300)),
         })
+
+        // La app tiene su propia sesión: el inicio automático y la tarjeta
+        // "Continuar como…" sobran y, al dibujarse fuera del shell, tapan los
+        // campos del login.
+        api.disableAutoSelect?.()
+        api.cancel?.()
+
         setEstado('listo')
       })
       .catch(() => {

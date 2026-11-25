@@ -26,6 +26,10 @@ import {
   validarUsername,
 } from './domain/validadores'
 import { useRegistroCliente } from './hooks'
+import {
+  rutaVerificacion,
+  type EstadoVerificacion,
+} from './verificacion'
 
 const TODOS_TOCADOS: Record<CampoRegistro, boolean> = {
   nombre: false,
@@ -73,7 +77,8 @@ export function RegistroPage() {
     nombre.trim().length > 0 &&
     username.trim().length > 0 &&
     contrasena.length > 0 &&
-    celular.length > 0
+    celular.length > 0 &&
+    correo.trim().length > 0
   const puedeEnviar = puedeCrearCuenta(formularioValido, aceptaTratamiento)
   const pendiente = registro.isPending
 
@@ -119,14 +124,18 @@ export function RegistroPage() {
       username: normalizarUsername(username),
       contrasena,
       celular: celularNormalizado,
+      correo: normalizarCorreoRegistro(correo),
     }
-    const correoNormalizado = normalizarCorreoRegistro(correo)
-    if (correoNormalizado) datos.correo = correoNormalizado
 
     enviando.current = true
     registro.mutate(datos, {
-      onSuccess: () => {
-        navegar(volver ?? '/mi', { replace: true })
+      // La cuenta queda creada pero sin sesión: primero se verifica el correo.
+      onSuccess: (respuesta) => {
+        const estado: EstadoVerificacion = {
+          correo: respuesta.correo,
+          mensaje: respuesta.mensaje,
+        }
+        navegar(rutaVerificacion(volver), { replace: true, state: estado })
       },
       onError: (fallo) => {
         setErrorEnvio(mapearErrorRegistro(fallo))
@@ -286,7 +295,7 @@ export function RegistroPage() {
           />
 
           <Input
-            etiqueta="Correo electrónico (opcional)"
+            etiqueta="Correo electrónico"
             name="correo"
             type="email"
             value={correo}
@@ -296,7 +305,7 @@ export function RegistroPage() {
             }}
             onBlur={() => marcar('correo')}
             error={errorDeCampo('correo', correo, errorCorreo)}
-            ayuda="Si lo dejas vacío, tu cuenta se crea sin correo."
+            ayuda="Te enviaremos un código de 6 dígitos para verificarlo."
             autoComplete="email"
             autoCapitalize="none"
             autoCorrect="off"
