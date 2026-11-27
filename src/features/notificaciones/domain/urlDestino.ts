@@ -10,7 +10,7 @@
  * - Sin URL o URL inválida: `/app/solicitudes`.
  */
 
-import { volverSeguro } from '@/shared/lib/rutas'
+import { volverClienteSeguro } from '@/shared/lib/rutas'
 
 export const RUTA_SOLICITUDES = '/app/solicitudes'
 export const RUTA_CLIENTE = '/mi'
@@ -58,9 +58,10 @@ export function urlDestinoSegura(
 }
 
 /**
- * Destino del push de cliente: misma regla que `volverSeguro` (`/mi`, `/mi/*`,
- * `/b/*`, `/cita/*`). Cualquier URL externa o fuera de esas rutas cae en `/mi`.
+ * Destino del push de cliente: solo rutas de su zona (`/mi`, `/mi/*`, `/b/*`,
+ * `/cita/*`). Cualquier URL externa o fuera de esas rutas cae en `/mi`, así que
+ * el push nunca puede abrir el panel del barbero.
  */
 export function urlDestinoCliente(url: string | null | undefined): string {
-  return volverSeguro(url) ?? RUTA_CLIENTE
+  return volverClienteSeguro(url) ?? RUTA_CLIENTE
 }

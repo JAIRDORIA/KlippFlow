@@ -29,6 +29,21 @@ export default function BarberZone() {
         />
         {/* Alias por compatibilidad: la ruta canónica es /instalar. */}
         <Route path="app/instalar" element={<Navigate to="/instalar" replace />} />
+        {/*
+         * Enlace profundo de los avisos de WhatsApp del barbero. Se sirve el
+         * mismo panel en /dashboard (sin redirigir) para que la URL del enlace
+         * se conserve también después del login.
+         */}
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<HoyPage />} />
+        </Route>
         <Route
           path="app"
           element={

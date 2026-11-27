@@ -96,6 +96,15 @@ describe('estadoVisualCita', () => {
     expect(estadoVisualCita(cita({ id: 2 }), 1)).toBe('futura')
   })
 
+  it('marca cancelada aunque haya otra cita próxima', () => {
+    const cancelada = cita({
+      id: 1,
+      estado: 'cancelada',
+      motivoCancelacion: 'Cancelada por el cliente',
+    })
+    expect(estadoVisualCita(cancelada, 2)).toBe('cancelada')
+  })
+
   it('sin próxima cita, una aceptada queda como futura', () => {
     expect(estadoVisualCita(cita({ id: 1 }), null)).toBe('futura')
   })

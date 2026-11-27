@@ -27,24 +27,34 @@ const almacenRoto: AlmacenPestana = {
 
 describe('pestanaInicial', () => {
   it('abre en cliente si no hay nada guardado', () => {
-    expect(pestanaInicial(false, almacenEnMemoria())).toBe('cliente')
+    expect(pestanaInicial(null, almacenEnMemoria())).toBe('cliente')
   })
 
   it('recuerda la pestaña de barbero', () => {
     const almacen = almacenEnMemoria({ [CLAVE_PESTANA_LOGIN]: 'barbero' })
-    expect(pestanaInicial(false, almacen)).toBe('barbero')
+    expect(pestanaInicial(null, almacen)).toBe('barbero')
   })
 
-  it('con volver siempre abre en cliente', () => {
+  it('un destino de cliente abre en cliente', () => {
     const almacen = almacenEnMemoria({ [CLAVE_PESTANA_LOGIN]: 'barbero' })
-    expect(pestanaInicial(true, almacen)).toBe('cliente')
+    expect(pestanaInicial('/mi', almacen)).toBe('cliente')
+    expect(pestanaInicial('/b/BARB-0001', almacen)).toBe('cliente')
+    expect(pestanaInicial('/cita/token', almacen)).toBe('cliente')
+  })
+
+  it('el enlace profundo del panel abre en barbero', () => {
+    const almacen = almacenEnMemoria({ [CLAVE_PESTANA_LOGIN]: 'cliente' })
+    expect(pestanaInicial('/dashboard', almacen)).toBe('barbero')
+    expect(pestanaInicial('/dashboard?origen=whatsapp', almacen)).toBe('barbero')
+    expect(pestanaInicial('/app/hoy', almacen)).toBe('barbero')
+    expect(pestanaInicial('/instalar', almacen)).toBe('barbero')
   })
 
   it('ignora valores desconocidos y almacenes que fallan', () => {
     const almacen = almacenEnMemoria({ [CLAVE_PESTANA_LOGIN]: 'admin' })
-    expect(pestanaInicial(false, almacen)).toBe('cliente')
-    expect(pestanaInicial(false, almacenRoto)).toBe('cliente')
-    expect(pestanaInicial(false, null)).toBe('cliente')
+    expect(pestanaInicial(null, almacen)).toBe('cliente')
+    expect(pestanaInicial(null, almacenRoto)).toBe('cliente')
+    expect(pestanaInicial(null, null)).toBe('cliente')
   })
 })
 

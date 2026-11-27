@@ -33,6 +33,7 @@ function renderizarLogin(entrada = '/login') {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/app/hoy" element={<p>Hoy</p>} />
+            <Route path="/dashboard" element={<p>Dashboard</p>} />
             <Route path="/mi" element={<p>Mi cuenta</p>} />
             <Route path="/registro/completar" element={<p>Completar</p>} />
             <Route path="/registro/verificar" element={<VerificarEspia />} />
@@ -306,6 +307,55 @@ describe('LoginPage', () => {
     )
     expect(window.localStorage.getItem('klippflow.sesion')).toContain(
       '"tipo":"cliente"',
+    )
+  })
+
+  it('conserva /dashboard tras el login del barbero', async () => {
+    vi.stubEnv('VITE_API_URL', 'http://localhost:3000')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            accessToken: 'token-barbero',
+            tipo: 'barbero',
+            barbero: {
+              id: 1,
+              codigoUnico: 'BARB-0001',
+              nombres: 'Barbero',
+              apellidos: 'Prueba',
+              nombreBarberia: 'Barbería Demo',
+              username: 'barbero1',
+              estadoCuenta: 'activo',
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      ),
+    )
+
+    renderizarLogin('/login?volver=%2Fdashboard')
+
+    // El enlace de WhatsApp abre directamente en la pestaña Barbero.
+    expect(screen.getByRole('radio', { name: 'Barbero' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+
+    fireEvent.change(screen.getByLabelText('Usuario'), {
+      target: { value: 'barbero1' },
+    })
+    fireEvent.change(screen.getByLabelText('Contraseña'), {
+      target: { value: 'Barbero2026' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    expect(await screen.findByText('Dashboard')).toBeInTheDocument()
+    expect(window.localStorage.getItem('klippflow.sesion')).toContain(
+      '"tipo":"barbero"',
     )
   })
 

@@ -1,4 +1,4 @@
-import { volverSeguro } from '@/shared/lib/rutas'
+import { volverClienteSeguro, volverSeguro } from '@/shared/lib/rutas'
 import {
   cerrarSesionLocal,
   leerToken,
@@ -93,7 +93,12 @@ export function construirDestinoLogin(
   const destino = zona === 'admin' ? '/admin/login' : '/login'
   const parametros = new URLSearchParams({ motivo })
   if (zona !== 'admin') {
-    const volver = volverSeguro(rutaActual)
+    // Cada rol solo conserva destinos de su propia zona: el barbero vuelve a
+    // /dashboard o /app/* y el cliente a /mi, /b/* o /cita/*.
+    const volver =
+      zona === 'cliente'
+        ? volverClienteSeguro(rutaActual)
+        : volverSeguro(rutaActual)
     if (volver) parametros.set('volver', volver)
   }
   return `${destino}?${parametros.toString()}`

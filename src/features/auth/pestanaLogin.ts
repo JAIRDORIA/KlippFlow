@@ -6,6 +6,8 @@
  * Es una preferencia del dispositivo, no de la sesión: cerrar sesión no la
  * borra.
  */
+import { esRutaDeBarbero } from '@/shared/lib/rutas'
+
 export type PestanaLogin = 'barbero' | 'cliente'
 
 export const CLAVE_PESTANA_LOGIN = 'kf_login_pestana'
@@ -26,14 +28,19 @@ export function almacenPestana(): AlmacenPestana | null {
 }
 
 /**
- * Pestaña con la que abre el login. Quien llega con `volver` viene de una
- * reserva o de una ruta de cliente, así que siempre ve "Cliente".
+ * Pestaña con la que abre el login.
+ *
+ * Si hay un destino (`volver`), manda su zona: un enlace al panel
+ * (`/dashboard`, `/app/*`, `/instalar`) abre en "Barbero"; una reserva o una
+ * ruta de cliente abre en "Cliente". Sin destino se usa la preferencia del
+ * dispositivo.
  */
 export function pestanaInicial(
-  tieneVolver: boolean,
+  destino: string | null,
   almacen: AlmacenPestana | null = almacenPestana(),
 ): PestanaLogin {
-  if (tieneVolver || !almacen) return 'cliente'
+  if (destino !== null) return esRutaDeBarbero(destino) ? 'barbero' : 'cliente'
+  if (!almacen) return 'cliente'
   try {
     return almacen.getItem(CLAVE_PESTANA_LOGIN) === 'barbero'
       ? 'barbero'

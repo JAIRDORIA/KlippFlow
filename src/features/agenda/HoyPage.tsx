@@ -253,6 +253,7 @@ const ESTILOS_PUNTO: Record<PuntoCita, string> = {
   proxima: 'size-[18px] border-[4px] border-accent-20 bg-bg',
   futura: 'size-[10px] border border-dim bg-bg',
   noAsistio: 'size-[10px] bg-red-60',
+  cancelada: 'size-[10px] bg-red-60',
 }
 
 function FilaAgenda({
@@ -282,6 +283,8 @@ function FilaAgenda({
   const propina = propinaDeCita(cita)
   const duracion = minutosEntreHoras(cita.horaInicio, cita.horaFin)
   const sinCita = esServicioSinCita(cita)
+  const cancelada = punto === 'cancelada'
+  const motivoCancelacion = cita.motivoCancelacion?.trim() ?? ''
 
   const detalleAcompanantes = acompanantes
     .map((acompanante) =>
@@ -298,7 +301,12 @@ function FilaAgenda({
   return (
     <li className="grid grid-cols-[62px_18px_minmax(0,1fr)] items-stretch gap-x-3 pb-3">
       <div className="flex flex-col items-end gap-0.5 pt-4">
-        <span className="whitespace-nowrap font-mono text-[var(--font-size-tiny)] tabular-nums text-text">
+        <span
+          className={cn(
+            'whitespace-nowrap font-mono text-[var(--font-size-tiny)] tabular-nums',
+            cancelada ? 'text-dim line-through' : 'text-text',
+          )}
+        >
           {hora12(cita.horaInicio)}
         </span>
         <span className="font-mono text-[var(--font-size-tiny)] tabular-nums text-dim">
@@ -325,6 +333,7 @@ function FilaAgenda({
           'flex flex-col gap-2',
           punto === 'atendida' && 'opacity-[var(--opacity-attended)]',
           punto === 'noAsistio' && 'opacity-[var(--opacity-attended)]',
+          cancelada && 'border-red-30',
           punto === 'proxima' && 'border-accent-40 ring-4 ring-accent-20',
         )}
       >
@@ -332,7 +341,12 @@ function FilaAgenda({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="type-card-title min-w-0 truncate">{nombre}</p>
-              {sinCita && <Chip variante="neutro" className="shrink-0">Sin cita</Chip>}
+              {sinCita && !cancelada && (
+                <Chip variante="neutro" className="shrink-0">Sin cita</Chip>
+              )}
+              {cancelada && (
+                <Chip variante="rojo" className="shrink-0">Cancelada</Chip>
+              )}
             </div>
             <p className="type-aux mt-1">{servicios.join(' · ') || 'Servicio'}</p>
           </div>
@@ -351,7 +365,13 @@ function FilaAgenda({
           </p>
         )}
 
-        {cita.avisoDescanso && (
+        {cancelada && motivoCancelacion && (
+          <p className="type-small font-medium text-red">
+            {motivoCancelacion}
+          </p>
+        )}
+
+        {!cancelada && cita.avisoDescanso && (
           <p className="flex items-start gap-1.5 rounded-[var(--radius-warning)] border border-amber-30 bg-amber-10 p-2 text-amber">
             <TriangleAlert
               aria-hidden="true"
@@ -363,7 +383,7 @@ function FilaAgenda({
           </p>
         )}
 
-        {!sinCita && cita.propuestaCambioHora && (
+        {!cancelada && !sinCita && cita.propuestaCambioHora && (
           <BloquePropuesta
             propuesta={cita.propuestaCambioHora}
             whatsappUrl={cita.whatsappUrl}

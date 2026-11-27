@@ -21,6 +21,7 @@ describe('zonaDeRuta', () => {
     expect(zonaDeRuta('/instalar')).toBe('barbero')
     expect(zonaDeRuta('/app')).toBe('barbero')
     expect(zonaDeRuta('/app/cuentas')).toBe('barbero')
+    expect(zonaDeRuta('/dashboard')).toBe('barbero')
     expect(zonaDeRuta('/b')).toBe('publico')
     expect(zonaDeRuta('/b/BARB-0001')).toBe('publico')
     expect(zonaDeRuta('/cita/abc123')).toBe('publico')
@@ -46,6 +47,7 @@ describe('tituloDeRuta', () => {
     expect(tituloDeRuta('/app/instalar')).toBe('Instalar · KlippFlow')
     expect(tituloDeRuta('/app')).toBe('Hoy · KlippFlow')
     expect(tituloDeRuta('/app/hoy')).toBe('Hoy · KlippFlow')
+    expect(tituloDeRuta('/dashboard')).toBe('Hoy · KlippFlow')
     expect(tituloDeRuta('/app/solicitudes')).toBe('Solicitudes · KlippFlow')
     expect(tituloDeRuta('/app/cuentas')).toBe('Cuentas · KlippFlow')
     expect(tituloDeRuta('/app/compras')).toBe('Compras · KlippFlow')
@@ -112,6 +114,7 @@ describe('esRutaNoIndex', () => {
       '/app/cuentas',
       '/app/compras',
       '/app/ajustes',
+      '/dashboard',
       '/admin',
       '/admin/login',
       '/login',

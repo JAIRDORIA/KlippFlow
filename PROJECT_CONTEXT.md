@@ -311,6 +311,7 @@ src/
 | `/` | — | Redirige a `/mi` (cliente), `/app` (barbero) o `/login` (sin sesión). |
 | `/login` | público | Real: formulario unificado, Google y recuperación. |
 | `/instalar` | barbero | Real: pasos de instalación y activación de notificaciones (`/app/instalar` redirige aquí). |
+| `/dashboard` | barbero | Alias de inicio del panel para los enlaces de WhatsApp; requiere sesión y conserva la URL tras el login. |
 | `/app/hoy` | barbero | Real: contadores, agenda, próximas acciones y horarios libres. |
 | `/app/solicitudes` | barbero | Real: orden por urgencia, cuenta regresiva y aceptar/rechazar. |
 | `/app/cuentas` | barbero | Real: tarjeta financiera, gráfico de 30 días y lista de días. |
@@ -331,6 +332,9 @@ src/
 
 Las zonas se cargan con `React.lazy`: público, barbero y admin van en chunks
 separados. `/app/*` exige sesión de barbero y `/mi/*` exige sesión de cliente.
+`/dashboard` sirve el mismo inicio del panel sin redirigir, para que el enlace
+de los avisos de WhatsApp conserve su URL. El login guarda el destino en
+`?volver=` y solo acepta rutas internas de la zona del rol; nunca URLs externas.
 
 ## 6. Convenciones obligatorias
 

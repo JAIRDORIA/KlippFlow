@@ -28,7 +28,12 @@ export function minutosEntreHoras(horaInicio: string, horaFin: string): number {
   return diferencia < 0 ? diferencia + 24 * 60 : diferencia
 }
 
-export type PuntoCita = 'atendida' | 'proxima' | 'futura' | 'noAsistio'
+export type PuntoCita =
+  | 'atendida'
+  | 'proxima'
+  | 'futura'
+  | 'noAsistio'
+  | 'cancelada'
 
 /**
  * La próxima cita es la primera cita `aceptada`, ordenada por hora de inicio,
@@ -53,6 +58,7 @@ export function estadoVisualCita(
   cita: CitaBarbero,
   idProxima: number | null,
 ): PuntoCita {
+  if (cita.estado === 'cancelada') return 'cancelada'
   if (cita.estado === 'atendida') return 'atendida'
   if (cita.estado === 'no_asistio') return 'noAsistio'
   if (cita.estado === 'aceptada' && cita.id === idProxima) return 'proxima'

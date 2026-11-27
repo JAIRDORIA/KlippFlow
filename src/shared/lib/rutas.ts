@@ -6,10 +6,42 @@
 export type TipoSesion = 'barbero' | 'cliente'
 
 const BASE_SEGURA = 'https://klippflow.invalid'
-const RUTAS_PERMITIDAS = [/^\/mi$/, /^\/mi\//, /^\/b\//, /^\/cita\//]
+/** Rutas internas del panel del barbero. */
+const RUTAS_BARBERO = [/^\/dashboard\/?$/, /^\/app(\/|$)/, /^\/instalar$/]
 
-function esRutaPermitida(pathname: string): boolean {
-  return RUTAS_PERMITIDAS.some((patron) => patron.test(pathname))
+/** Rutas internas del cliente. */
+const RUTAS_CLIENTE = [/^\/mi$/, /^\/mi\//, /^\/b\//, /^\/cita\//]
+
+/**
+ * Destinos internos aceptados por `volver` en el login unificado. Incluye el
+ * panel del barbero (`/dashboard` y `/app/*`) para que un enlace profundo de
+ * WhatsApp conserve su destino tras el login. Quedan fuera `/admin`, `/login` y
+ * cualquier URL con origen externo.
+ */
+const RUTAS_PERMITIDAS = [...RUTAS_BARBERO, ...RUTAS_CLIENTE]
+
+function esRutaPermitida(
+  pathname: string,
+  permitidas: readonly RegExp[],
+): boolean {
+  return permitidas.some((patron) => patron.test(pathname))
+}
+
+/**
+ * ¿El destino pertenece al panel del barbero? Se usa para abrir el login en la
+ * pestaña correcta cuando el enlace profundo viene de un aviso de WhatsApp.
+ */
+export function esRutaDeBarbero(ruta: string | null | undefined): boolean {
+  if (typeof ruta !== 'string') return false
+
+  const [crudo = ''] = ruta.trim().split(/[?#]/)
+  const pathname = crudo.replace(/\/+$/, '') || '/'
+  return (
+    pathname === '/dashboard' ||
+    pathname === '/instalar' ||
+    pathname === '/app' ||
+    pathname.startsWith('/app/')
+  )
 }
 
 function tieneControles(valor: string): boolean {
@@ -22,9 +54,13 @@ function tieneControles(valor: string): boolean {
 
 /**
  * Devuelve la ruta si es un destino interno permitido o `null`.
- * Acepta solo una "/" inicial y rutas /b/*, /cita/*, /mi o /mi/*.
+ * Acepta solo una "/" inicial y las rutas internas de la lista indicada.
+ * Nunca devuelve URLs externas.
  */
-export function volverSeguro(ruta: string | null | undefined): string | null {
+function destinoSeguro(
+  ruta: string | null | undefined,
+  permitidas: readonly RegExp[],
+): string | null {
   if (typeof ruta !== 'string') return null
   if (ruta.includes('\\') || tieneControles(ruta)) return null
 
@@ -56,9 +92,27 @@ export function volverSeguro(ruta: string | null | undefined): string | null {
     return null
   }
 
-  if (!esRutaPermitida(pathname)) return null
+  if (!esRutaPermitida(pathname, permitidas)) return null
 
   return `${url.pathname}${url.search}`
+}
+
+/**
+ * Destino seguro del login unificado: panel del barbero (/dashboard, /app/*,
+ * /instalar) o zona del cliente (/b/*, /cita/*, /mi o /mi/*).
+ */
+export function volverSeguro(ruta: string | null | undefined): string | null {
+  return destinoSeguro(ruta, RUTAS_PERMITIDAS)
+}
+
+/**
+ * Destino seguro para los push del cliente: solo su zona. Así un payload
+ * ajeno (`/app/hoy`, `/admin`…) no puede abrir el panel del barbero.
+ */
+export function volverClienteSeguro(
+  ruta: string | null | undefined,
+): string | null {
+  return destinoSeguro(ruta, RUTAS_CLIENTE)
 }
 
 export function rutaInicialPorRol(tipo: TipoSesion | null | undefined): string {

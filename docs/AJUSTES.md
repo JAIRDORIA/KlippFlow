@@ -332,6 +332,9 @@ Tarjeta **Recordatorios por WhatsApp** de `/app/ajustes`
   respondería 400.
 - Si el celular guardado existe, el campo se precarga; si es `null`, queda vacío
   y el interruptor apagado.
+- El texto de la tarjeta explica el recordatorio 1 h antes de cada cita aceptada
+  y que también llegará un aviso si el cliente cancela su cita desde WhatsApp
+  (plantilla `cita_cancelada_al_barbero`). No cambia el contrato del PUT.
 - El PUT exitoso muestra el toast “Recordatorios por WhatsApp guardados.” y
   adelanta la caché de `['barbero','configuracion']` con la respuesta; además
   invalida esa clave.
