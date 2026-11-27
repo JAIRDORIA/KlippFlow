@@ -127,6 +127,8 @@ function FormularioWhatsapp({ inicial }: { inicial: ConfiguracionWhatsapp }) {
           </p>
           <p className="type-helper">
             Te avisaremos por WhatsApp 1 hora antes de cada cita aceptada.
+            También recibirás un aviso si un cliente cancela su cita desde
+            WhatsApp.
           </p>
         </div>
         <Switch

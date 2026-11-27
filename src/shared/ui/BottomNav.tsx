@@ -1,5 +1,5 @@
 import { Home, Inbox, Settings, ShoppingBag, Wallet } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/shared/lib/cn'
 import { Badge } from './Badge'
 
@@ -18,11 +18,26 @@ const pestanas = [
   { ruta: '/app/ajustes', etiqueta: 'Ajustes', Icono: Settings },
 ] as const
 
+/**
+ * `/dashboard` es el alias del inicio del panel que llega en los enlaces de
+ * WhatsApp; debe marcar «Hoy» como activo aunque la URL no sea `/app/hoy`.
+ */
+function esPestanaActiva(
+  ruta: string,
+  pathname: string,
+  isActive: boolean,
+): boolean {
+  if (isActive) return true
+  return ruta === '/app/hoy' && pathname === '/dashboard'
+}
+
 export function BottomNav({
   solicitudesPendientes,
   className,
   fija = true,
 }: BottomNavProps) {
+  const { pathname } = useLocation()
+
   return (
     <nav
       aria-label="Navegación principal"
@@ -45,31 +60,38 @@ export function BottomNav({
                 className={({ isActive }) =>
                   cn(
                     'type-nav flex min-h-[var(--height-button-compact)] flex-1 flex-col items-center justify-center gap-1 px-1',
-                    isActive ? 'text-accent' : 'text-dim',
+                    esPestanaActiva(ruta, pathname, isActive)
+                      ? 'text-accent'
+                      : 'text-dim',
                   )
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    <span className="relative inline-flex">
-                      <Icono
-                        aria-hidden="true"
-                        size={22}
-                        strokeWidth={1.6}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      {conBadge && (
-                        <Badge
-                          cantidad={solicitudesPendientes}
-                          maximo={9}
-                          className="absolute -right-3 -top-2"
+                {({ isActive }) => {
+                  const activo = esPestanaActiva(ruta, pathname, isActive)
+                  return (
+                    <>
+                      <span className="relative inline-flex">
+                        <Icono
+                          aria-hidden="true"
+                          size={22}
+                          strokeWidth={1.6}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
-                      )}
-                    </span>
-                    <span className={isActive ? 'text-accent' : undefined}>{etiqueta}</span>
-                  </>
-                )}
+                        {conBadge && (
+                          <Badge
+                            cantidad={solicitudesPendientes}
+                            maximo={9}
+                            className="absolute -right-3 -top-2"
+                          />
+                        )}
+                      </span>
+                      <span className={activo ? 'text-accent' : undefined}>
+                        {etiqueta}
+                      </span>
+                    </>
+                  )
+                }}
               </NavLink>
             </li>
           )

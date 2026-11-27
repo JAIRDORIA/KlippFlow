@@ -158,8 +158,15 @@ describe('peticion', () => {
       '/login?motivo=sesion-expirada&volver=%2Fmi',
     )
     expect(construirDestinoLogin('barbero', 'sesion-expirada', '/app/hoy')).toBe(
-      '/login?motivo=sesion-expirada',
+      '/login?motivo=sesion-expirada&volver=%2Fapp%2Fhoy',
     )
+    expect(construirDestinoLogin('barbero', 'sesion-expirada', '/dashboard')).toBe(
+      '/login?motivo=sesion-expirada&volver=%2Fdashboard',
+    )
+    // Un cliente no conserva una ruta del panel del barbero.
+    expect(
+      construirDestinoLogin('cliente', 'sesion-expirada', '/dashboard'),
+    ).toBe('/login?motivo=sesion-expirada')
     expect(construirDestinoLogin('admin', 'expirada', '/admin')).toBe(
       '/admin/login?motivo=expirada',
     )

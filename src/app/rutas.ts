@@ -21,6 +21,7 @@ export function zonaDeRuta(pathname: string): Zona {
   if (
     ruta === '/login' ||
     ruta === '/instalar' ||
+    ruta === '/dashboard' ||
     ruta === '/app' ||
     ruta.startsWith('/app/')
   ) {
@@ -90,6 +91,7 @@ export function tituloDeRuta(
   if (ruta === '/registro/verificar') return `Verifica tu correo · ${SUFIJO}`
   if (ruta === '/recuperar') return `Recuperar contraseña · ${SUFIJO}`
 
+  if (ruta === '/dashboard') return `Hoy · ${SUFIJO}`
   if (ruta === '/app' || ruta === '/app/hoy') return `Hoy · ${SUFIJO}`
   if (ruta === '/app/solicitudes') return `Solicitudes · ${SUFIJO}`
   if (ruta === '/app/cuentas') return `Cuentas · ${SUFIJO}`
@@ -115,6 +117,7 @@ export function tituloDeRuta(
 /** Rutas que exigen sesión o son herramientas internas del barbero/admin. */
 export const PREFIJOS_PRIVADOS = [
   '/app',
+  '/dashboard',
   '/admin',
   '/login',
   '/instalar',

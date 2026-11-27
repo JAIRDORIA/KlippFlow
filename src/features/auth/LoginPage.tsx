@@ -120,10 +120,10 @@ export function LoginPage() {
   const volver = volverSeguro(parametros.get('volver'))
   const aviso = avisoPorMotivo(parametros.get('motivo'))
 
-  // El barbero queda recordado en su dispositivo; quien llega con `volver`
-  // viene de una reserva y ve "Cliente".
+  // El destino manda: /dashboard y /app/* abren en "Barbero"; una reserva o
+  // una ruta de cliente, en "Cliente". Sin `volver`, se recuerda el dispositivo.
   const [pestana, setPestana] = useState<PestanaLogin>(() =>
-    pestanaInicial(volver !== null),
+    pestanaInicial(volver),
   )
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -161,7 +161,9 @@ export function LoginPage() {
   const esCliente = pestana === 'cliente'
 
   if (estaAutenticado) {
-    return <Navigate to={rutaInicialPorRol(tipo)} replace />
+    // Con sesión ya abierta, un enlace profundo sigue a su destino si es
+    // interno y seguro; si no, va al inicio del rol.
+    return <Navigate to={volver ?? rutaInicialPorRol(tipo)} replace />
   }
 
   function cambiarPestana(valor: PestanaLogin) {

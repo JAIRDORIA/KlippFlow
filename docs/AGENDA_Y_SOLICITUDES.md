@@ -16,6 +16,13 @@ Fuentes de verdad:
 No se inventó ningún campo de la API. Donde el diseño y el backend difieren,
 manda el backend y la diferencia queda anotada en `docs/DISENO.md` §9.
 
+**Cancelación desde el recordatorio de WhatsApp:** el dashboard no lista el
+estado `cancelada` (`docs/backend/BARBERO_SOLICITUDES_Y_DASHBOARD.md`). Al
+cancelarse, la cita desaparece de `citas` y su rango vuelve a aparecer en
+`huecosLibres`, así que el horario se ve libre. Aun así, `HoyPage` pinta el chip
+«Cancelada» y el `motivoCancelacion` si el backend llegara a incluir una cita
+cancelada en la respuesta; no se consume ningún endpoint nuevo.
+
 ---
 
 ## 1. Estructura
